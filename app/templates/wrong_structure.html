@@ -1,0 +1,75 @@
+{% extends 'base/base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar-partial-charges@1.2.0/dist/style.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock styles %}
+
+{% block body %}
+<div class="container mt-3 p-3">
+    <div class="row">
+        <div class="col">
+            <h1 style="margin-bottom:25px">
+                <strong><span style="color:tomato">α</span><span style="color: #1E90FF">Charges – Wrong
+                        structure</span></strong>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 mt-0">
+            <strong> UniProt code:</strong> <a href="https://alphafold.ebi.ac.uk/entry/{{ code }}" target="_blank"
+                rel="noreferrer"> {{ code }} </a>
+        </div>
+        <div class="col-12 mt-1">
+            <strong> AlphaFold2 prediction version:</strong> {{ alphafold_prediction_version }}
+        </div>
+        <div class="col-12 mt-1">
+            <strong> pH:</strong> {{ ph }}
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-12">
+            {% include 'base/flash.html' %}
+        </div>
+    </div>
+    <div class="row px-3">
+        <div class="col">
+            <div id="root"></div>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-7">
+            <a href="{{ url_for('download_files_for_wrong_structure', ID=ID) }}" class="btn btn-success" id="download">
+                Download structure
+            </a>
+        </div>
+        <div class="col text-right">
+            <a href="{{ url_for('main_site') }}" class="btn btn-primary">Back to main page</a>
+        </div>
+    </div>
+    <hr>
+    {% include 'base/elixir.html' %}
+    <hr>
+    {% include 'base/footer.html' %}
+</div>
+{% endblock body %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
+<script src="{{ url_for('static', filename='bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/molstar-partial-charges@1.2.0/dist/molstar.umd.js"></script>
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+<script>
+    const structure_url = '{{ url_for("get_structure", ID=ID, FORMAT="pdb") }}';
+    init_wrong_structure(structure_url, '{{ problematic_atoms|tojson }}');
+
+    // initialize bootstrap tooltips
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+
+</script>
+{% endblock scripts %}

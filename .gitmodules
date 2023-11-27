@@ -1,0 +1,6 @@
+[submodule "app/src/rock"]
+	path = app/src/rock
+	url = https://github.com/sb-ncbr/pro
+[submodule "app/src/pro"]
+	path = app/src/pro
+	url = https://github.com/sb-ncbr/pro
