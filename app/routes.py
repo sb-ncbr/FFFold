@@ -186,9 +186,19 @@ def download_files():
 @application.route('/structure/<ID>/<FORMAT>')
 def get_structure(ID: str,
                   FORMAT: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_optimized.{FORMAT}'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_optimized.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
+@application.route('/original_structure/<ID>/<FORMAT>')
+def get_original_structure(ID: str,
+                           FORMAT: str):
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/inputed_PDB/{ID.split("_")[0]}_optimized.pdb'
+    return Response(open(filepath, 'r').read(), mimetype='text/plain')
+
+@application.route('/residues_logs/<ID>')
+def get_residues_logs(ID: str):
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/residues.logs'
+    return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 @application.route('/calculate_charges/<string:code>')
 def calculate_charges(code: str):
