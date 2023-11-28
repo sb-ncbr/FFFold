@@ -19,7 +19,7 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 def already_calculated(ID):
     path = f'{root_dir}/calculated_structures/{ID}'
     if os.path.isdir(path):
-        if os.path.isfile(f'{path}/optimization/optimized_PDB/{ID.split("_")[0]}_optimized.pdb'):
+        if os.path.isfile(f'{path}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'):
             return True
         elif time() - os.stat(path).st_mtime > 10000:
             # for case that results directory exists without results (charges.txt or problematic_atoms.json)
@@ -31,7 +31,7 @@ def already_calculated(ID):
 def is_running(ID):
     path = f'{root_dir}/calculated_structures/{ID}'
     if os.path.isdir(path):
-        if os.path.isfile(f'{path}/optimization/optimized_PDB/{ID.split("_")[0]}_optimized.pdb'):
+        if os.path.isfile(f'{path}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'):
             return False
         elif time() - os.stat(path).st_mtime > 10000:
             return False
@@ -186,13 +186,13 @@ def download_files():
 @application.route('/structure/<ID>/<FORMAT>')
 def get_structure(ID: str,
                   FORMAT: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_optimized.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 @application.route('/original_structure/<ID>/<FORMAT>')
 def get_original_structure(ID: str,
                            FORMAT: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/inputed_PDB/{ID.split("_")[0]}_optimized.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/inputed_PDB/{ID.split("_")[0]}_added_H.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 @application.route('/residues_logs/<ID>')
