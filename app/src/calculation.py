@@ -72,7 +72,7 @@ class Calculation:
         self.logs.add_log('Optimization of structure...')
         s = time()
         PRO(f"{self.data_dir}/optimization",
-            self.pdb_file).optimize()
+            self.pdb_file_with_hydrogens).optimize()
         # write charges to files
         self.logs.add_log(f'Structure optimized. ({round(time() - s, 2)}s)')
 
