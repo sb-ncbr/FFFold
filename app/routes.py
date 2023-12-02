@@ -184,7 +184,7 @@ def download_files():
         zip.write(f'{data_dir}/{code}_added_H.cif', arcname=f'{code}_added_H.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
-def add_AF_confidence_score(block, ID):
+def add_AF_confidence_score(write_block, ID):
     response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-model_v4.cif')
     document = gemmi.cif.read_string(response.text)
     block = document.sole_block()
@@ -199,18 +199,14 @@ def add_AF_confidence_score(block, ID):
         ma_qa_metric_global_prefix: block.get_mmcif_category(ma_qa_metric_global_prefix)
     }
 
-    asym_id = block.get_mmcif_category('_struct_asym').get('id')[0]
+    asym_id = write_block.get_mmcif_category('_struct_asym').get('id')[0]
 
     length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
     categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
 
     for name, data in categories.items():
-        block.set_mmcif_category(name, data)
-        
-    return block
-        
-    print(block.as_string())
-        
+        write_block.set_mmcif_category(name, data)
+    
 
 def create_mmcif(input_file, output_file, ID):
     structure = gemmi.read_pdb(input_file)
@@ -218,17 +214,26 @@ def create_mmcif(input_file, output_file, ID):
     structure.assign_label_seq_id()
     block = structure.make_mmcif_block()
     block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-
-    block = add_AF_confidence_score(block, ID)
+    add_AF_confidence_score(block, ID)
     block.write_file(output_file)
 
 @application.route('/structure/<ID>/<FORMAT>')
 def get_structure(ID: str,
                   FORMAT: str):
     input_file = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'
-    output_file = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_CIF/{ID}_added_H_optimized.cif'
-    create_mmcif(input_file, output_file, ID.split("_")[0])
-    return Response(open(output_file, 'r').read(), mimetype='text/plain')
+    if FORMAT == 'pdb':
+        return Response(open(input_file, 'r').read(), mimetype='text/plain')
+    elif FORMAT == 'cif':
+        output_dir = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_CIF'
+        output_file = f'{output_dir}/{ID.split("_")[0]}_added_H_optimized.cif'
+        try:
+            os.mkdir(output_dir)
+        except:
+            pass
+        create_mmcif(input_file, output_file, ID.split("_")[0])
+        return Response(open(output_file, 'r').read(), mimetype='text/plain')
+
+    return Response('', mimetype='text/plain')
 
 @application.route('/original_structure/<ID>/<FORMAT>')
 def get_original_structure(ID: str,
