@@ -7,7 +7,6 @@ import gemmi
 import requests
 
 from .logs import Logs
-from .molecule import Molecule
 
 from .pro.pro import PRO
 
@@ -52,19 +51,6 @@ class Calculation:
                   f'{self.pqr_file} > {self.data_dir}/propka.log 2>&1 ')
         self.logs.add_log(f'Structure protonated. ({round(time() - s, 2)}s)')
 
-    def load_molecule(self):
-        self.logs.add_log('Loading of molecule...')
-        s = time()
-        try:
-            self.molecule = Molecule(self.pdb_file_with_hydrogens,
-                                     self.pqr_file)
-        except ValueError as error:
-            with open(f"{self.data_dir}/problematic_atoms.json", "w") as problematic_atoms_file:
-                json.dump(error.args[0], problematic_atoms_file)
-            return False, str(error)
-        self.logs.add_log(f'Molecule loaded. ({round(time() - s, 2)}s)')
-        return True, None
-
 
 
 
@@ -73,76 +59,5 @@ class Calculation:
         s = time()
         PRO(f"{self.data_dir}/optimization",
             self.pdb_file_with_hydrogens).optimize()
-        # write charges to files
         self.logs.add_log(f'Structure optimized. ({round(time() - s, 2)}s)')
 
-    def _write_txt(self):
-        with open(f'{self.data_dir}/charges.txt', 'w') as chg_file:
-            chg_file.write(f'{self.code}\n' + ' '.join([str(round(charge, 4)) for charge in self.charges]) + ' \n')
-
-    def _write_pqr(self):
-        pqr_file_lines = open(self.pqr_file).readlines()
-        c = 0
-        new_lines = []
-        for line in pqr_file_lines:
-            if line[:4] == 'ATOM':
-                new_lines.append(line[:54] + '{:>8.4f}'.format(self.charges[c]) + line[62:])
-                c += 1
-            else:
-                new_lines.append(line)
-        with open(self.pqr_file, 'w') as pqr_file:
-            pqr_file.write(''.join(new_lines))
-
-    def _add_AF_confidence_score(self, write_block):
-        document = gemmi.cif.read(self.mmcif_file)
-        block = document.sole_block()
-
-        ma_qa_metric_prefix = '_ma_qa_metric'
-        ma_qa_metric_local_prefix = '_ma_qa_metric_local'
-        ma_qa_metric_global_prefix = '_ma_qa_metric_global'
-
-        categories = {
-            ma_qa_metric_prefix: block.get_mmcif_category(ma_qa_metric_prefix),
-            ma_qa_metric_local_prefix: block.get_mmcif_category(ma_qa_metric_local_prefix),
-            ma_qa_metric_global_prefix: block.get_mmcif_category(ma_qa_metric_global_prefix)
-        }
-
-        asym_id = write_block.get_mmcif_category('_struct_asym').get('id')[0]
-
-        length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
-        categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
-
-        for name, data in categories.items():
-            write_block.set_mmcif_category(name, data)
-
-    def _write_mmcif(self):
-        input_file = self.pdb_file_with_hydrogens
-        filename, _ = os.path.splitext(input_file)
-        output_file = f"{filename}.cif"
-        structure = gemmi.read_pdb(input_file)
-        structure.setup_entities()
-        structure.assign_label_seq_id()
-        block = structure.make_mmcif_block()
-        block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-        sb_ncbr_partial_atomic_charges_meta_prefix = "_sb_ncbr_partial_atomic_charges_meta."
-        sb_ncbr_partial_atomic_charges_meta_attributes = ["id",
-                                                  "type",
-                                                  "method"]
-        metadata_loop = block.init_loop(sb_ncbr_partial_atomic_charges_meta_prefix,
-                                        sb_ncbr_partial_atomic_charges_meta_attributes)
-        metadata_loop.add_row(['1',
-                               "'empirical'",
-                               "'SQE+qp/Schindler 2021 (PUB_pept)'"])
-        sb_ncbr_partial_atomic_charges_prefix = "_sb_ncbr_partial_atomic_charges."
-        sb_ncbr_partial_atomic_charges_attributes = ["type_id",
-                                             "atom_id",
-                                             "charge"]
-        charges_loop = block.init_loop(sb_ncbr_partial_atomic_charges_prefix,
-                                       sb_ncbr_partial_atomic_charges_attributes)
-        for atomId, charge in enumerate(self.charges):
-            charges_loop.add_row(["1",
-                                  f"{atomId + 1}",
-                                  f"{charge: .4f}"])
-
-        self._add_AF_confidence_score(block)
-        block.write_file(output_file)

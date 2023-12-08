@@ -1,6 +1,6 @@
 {% extends 'base/base.html' %}
 
-{% block title %} αCharges – Calculation results {% endblock title %}
+{% block title %} FFFold – Calculation results {% endblock title %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='molstar.css') }}" />
@@ -12,7 +12,7 @@
   <div class="row">
     <div class="col">
       <h1 style="margin-bottom:25px">
-        <strong><span style="color:tomato">α</span><span style="color: #1E90FF">Charges – Calculation
+        <strong><span style="color:tomato">FF</span><span style="color: #1E90FF">Fold – Calculation
                         results</span></strong>
       </h1>
     </div>
@@ -76,23 +76,19 @@
             </fieldset>
         </div>
     </div>
-    <hr>
     <div class="row py-3">
     <div class="col">
       <div id="root"></div>
     </div>
   </div>
-  <hr>
   <div class="row">
     <div class="col-7">
-      <a href="{{ url_for('download_files', ID=ID) }}" class="btn btn-success" id="download">Download charges and
-                protonated structure</a>
+      <a href="{{ url_for('download_files', ID=ID) }}" class="btn btn-success" id="download">Download optimized structure</a>
     </div>
     <div class="col text-right">
       <a href="{{ url_for('main_site') }}" class="btn btn-primary">Back to main page</a>
-        </div>
     </div>
-  <hr>
+    </div>
   {% include 'base/footer.html' %}
 </div>
 {% endblock body %}
