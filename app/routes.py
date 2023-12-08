@@ -1,4 +1,3 @@
-import json
 import os
 import zipfile
 from random import random
@@ -9,7 +8,7 @@ import requests
 import gemmi
 
 from src.calculation import Calculation
-from src.input_validators import valid_pH, valid_prediction_version, valid_alphafold_request
+from src.input_validators import valid_pH,  valid_alphafold_request
 
 application = Flask(__name__)
 application.jinja_env.trim_blocks = True
@@ -24,7 +23,7 @@ def already_calculated(ID):
         if os.path.isfile(f'{path}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'):
             return True
         elif time() - os.stat(path).st_mtime > 10000:
-            # for case that results directory exists without results (charges.txt or problematic_atoms.json)
+            # for case that results directory exists without optimized structures
             # it means that something unexpected happen during calculation
             os.system(f'rm -r {root_dir}/calculated_structures/{ID}')
     return False
@@ -51,7 +50,7 @@ def main_site():
                                    code=code)
 
         elif request.form['action'] == 'optimize structure':
-            ph, alphafold_prediction_version = request.form['ph'], request.form['prediction_version']
+            ph = request.form['ph']
 
             ph, is_ph_valid = valid_pH(ph)
             if not is_ph_valid:
@@ -60,13 +59,13 @@ def main_site():
                 return render_template('index.html',
                                        code=code)
 
-            ID = f'{code}_{ph}_{alphafold_prediction_version}'
+            ID = f'{code}_{ph}'
 
             # check whether the structure is currently calculated
             if is_running(ID):
-                message = Markup(f'The partial atomic charges for your input are just calculated. '
-                             f'For results visit  <a href="https://alphacharges.ncbr.muni.cz/results?ID={ID}" class="alert-link"'
-                             f'target="_blank" rel="noreferrer">https://alphacharges.ncbr.muni.cz/results?ID={ID}</a>'
+                message = Markup(f'The structure is just optimized. '
+                             f'For results visit  <a href="https://fffold.ncbr.muni.cz/results?ID={ID}" class="alert-link"'
+                             f'target="_blank" rel="noreferrer">https://fffold.ncbr.muni.cz/results?ID={ID}</a>'
                              f' after a while.')
                 flash(message, 'info')
                 return render_template('index.html')
@@ -75,8 +74,8 @@ def main_site():
                 return redirect(url_for('results',
                                         ID=ID))
 
-            if not valid_alphafold_request(code, alphafold_prediction_version):
-                message = Markup(f'The structure with code <strong>{code}</strong> in prediction version <strong>{alphafold_prediction_version}</strong> '
+            if not valid_alphafold_request(code):
+                message = Markup(f'The structure with code <strong>{code}</strong> in prediction version <strong>4</strong> '
                       f'is either not found in AlphaFoldDB or the code is entered in the wrong format. '
                       f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                       f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
@@ -87,7 +86,6 @@ def main_site():
             # start calculation
             return render_template('computation_progress.html',
                                    ID=ID,
-                                   alphafold_prediction_version=alphafold_prediction_version,
                                    code=code,
                                    ph=ph)
     return render_template('index.html')
@@ -116,15 +114,15 @@ def results():
     ID = request.args.get('ID')
 
     try:
-        code, ph, alphafold_prediction_version = ID.split('_')
+        code, ph = ID.split('_')
     except:
-        message = Markup('The ID was entered in the wrong format. The ID should be of the form <strong>&ltUniProt code&gt_&ltph&gt_&ltAlphaFold2 prediction version&gt</strong>.')
+        message = Markup('The ID was entered in the wrong format. The ID should be of the form <strong>&ltUniProt code&gt_&ltph&gt.')
         flash(message, 'danger')
         return redirect(url_for('main_site'))
 
 
     if not already_calculated(ID) and not is_running(ID):
-        message = Markup(f'There are no results for structure with UniProt <strong>{code}</strong> in AlphaFold2 prediction version <strong>{alphafold_prediction_version}</strong> and pH <strong>{ph}</strong>.')
+        message = Markup(f'There are no results for structure with UniProt <strong>{code}</strong> and pH <strong>{ph}</strong>.')
         flash(message, 'danger')
         return redirect(url_for('main_site'))
 
@@ -132,8 +130,7 @@ def results():
     return render_template('results.html',
                            ID=ID,
                                code=code,
-                               ph=ph,
-                           alphafold_prediction_version=alphafold_prediction_version)
+                               ph=ph)
 
 
 
@@ -144,6 +141,7 @@ def download_files():
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
         zip.write(f'{data_dir}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb',f'{ID.split("_")[0]}_added_H_optimized.pdb')
+        zip.write(f'{data_dir}/optimization/optimized_CIF/{ID.split("_")[0]}_added_H_optimized.cif', f'{ID.split("_")[0]}_added_H_optimized.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 def add_AF_confidence_score(write_block, ID):

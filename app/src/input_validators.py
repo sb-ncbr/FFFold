@@ -11,19 +11,7 @@ def valid_pH(ph):
         return ph, False
     return ph, True
 
-def valid_prediction_version(version):
-    if version is None:
-        return 4, True
-    try:
-        version = int(version)
-    except ValueError:
-        return version, False
-    if version not in (1,2,3,4):
-        return version, False
-    return version, True
-
-
-def valid_alphafold_request(code, alphafold_prediction_version):
+def valid_alphafold_request(code):
     # check whether UniProt code is valid, ping AlphaFold website
-    response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v{alphafold_prediction_version}.pdb')
+    response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.pdb')
     return response.status_code == 200
