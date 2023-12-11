@@ -6,6 +6,7 @@
 app/examples
 app/calculated_structures/*
 app/logs.txt
+app/.idea/*
 
 
 # C extensions

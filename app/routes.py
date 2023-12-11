@@ -1,20 +1,62 @@
+import gemmi
 import os
+import requests
+import requests
 import zipfile
+from datetime import datetime
+from flask import render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
+from multiprocessing import Process, Queue
 from random import random
 from time import time
 
-from flask import render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
-import requests
-import gemmi
+from pro.pro import PRO
 
-from src.calculation import Calculation
-from src.input_validators import valid_pH,  valid_alphafold_request
+
+def valid_pH(ph):
+    if ph is None:
+        return 7.0, True
+    try:
+        ph = float(ph)
+    except ValueError:
+        return ph, False
+    if not 0 <= ph <= 14:
+        return ph, False
+    return ph, True
+
+def valid_alphafold_request(code):
+    # check whether UniProt code is valid, ping AlphaFold website
+    response = requests.head(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.pdb')
+    return response.status_code == 200
+
+
+
+
+
+
+
 
 application = Flask(__name__)
 application.jinja_env.trim_blocks = True
 application.jinja_env.lstrip_blocks = True
 application.config['SECRET_KEY'] = str(random())
 root_dir = os.path.dirname(os.path.abspath(__file__))
+
+queue = Queue()
+processes = []
+
+def submit_job(ID, queue, processes):
+    queue.put(ID)
+    if len(processes) < 3:
+        job = Process(target=optimize_structures, args=(queue,))
+        job.start()
+        processes.append(job)
+    return processes
+
+
+def optimize_structures(queue):
+    while not queue.empty():
+        ID = queue.get()
+        optimize_structure(ID)
 
 
 def already_calculated(ID):
@@ -63,7 +105,7 @@ def main_site():
 
             # check whether the structure is currently calculated
             if is_running(ID):
-                message = Markup(f'The structure is just optimized. '
+                message = Markup(f'Optimization of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submited. '
                              f'For results visit  <a href="https://fffold.ncbr.muni.cz/results?ID={ID}" class="alert-link"'
                              f'target="_blank" rel="noreferrer">https://fffold.ncbr.muni.cz/results?ID={ID}</a>'
                              f' after a while.')
@@ -75,38 +117,29 @@ def main_site():
                                         ID=ID))
 
             if not valid_alphafold_request(code):
-                message = Markup(f'The structure with code <strong>{code}</strong> in prediction version <strong>4</strong> '
-                      f'is either not found in AlphaFoldDB or the code is entered in the wrong format. '
+                message = Markup(f'The structure with code <strong>{code}</strong> '
+                      f'is either not found in AlphaFold DB or the code is entered in the wrong format. '
                       f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                       f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
                       f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).')
                 flash(message, 'warning')
                 return render_template('index.html')
 
+            # with open(f'{self.root_dir}/calculated_structures/logs.txt', 'a') as log_file:
+            #     log_file.write(f'{remote_addr} {self.code} {self.ph} {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}\n')
+
             # start calculation
-            return render_template('computation_progress.html',
-                                   ID=ID,
-                                   code=code,
-                                   ph=ph)
+            global processes
+            processes = [process for process in processes if process.is_alive()]
+            submit_job(ID, queue, processes)
+            message = Markup(f'The structure with UniProt code <strong>{code}</strong> protonated at pH <strong>{ph}</strong> was successfully included in the computational queue. '
+                f'For results visit  <a href="https://fffold.ncbr.muni.cz/results?ID={ID}" class="alert-link"'
+                f'target="_blank" rel="noreferrer">https://fffold.ncbr.muni.cz/results?ID={ID}</a>'
+                f' after a while.')
+            flash(message, 'info')
+            return render_template('index.html')
+
     return render_template('index.html')
-
-
-@application.route('/calculation', methods=['POST'])
-def calculation():
-
-    calculation = Calculation(request.args.get('ID'),
-                              request.remote_addr,
-                              "empirical_method",
-                              root_dir)
-    calculation.download_PDB()
-    calculation.protonate_structure()
-    calculation.optimize_structure()
-    return redirect(url_for('results', ID=calculation.ID))
-
-
-@application.route('/progress')
-def progress():
-    return open(f'{root_dir}/calculated_structures/{request.args.get("ID")}/page_log.txt', 'r').read()
 
 
 @application.route('/results')
@@ -209,3 +242,32 @@ def get_residues_logs(ID: str):
 @application.errorhandler(404)
 def page_not_found(error):
     return render_template('404.html'), 404
+
+
+
+
+def optimize_structure(ID):
+    code, ph = ID.split('_')
+    data_dir = f'{root_dir}/calculated_structures/{ID}'
+    pdb_file = f'{data_dir}/{code}.pdb' # original pdb from alphafold, without hydrogens
+    pdb_file_with_hydrogens = f'{data_dir}/{code}_added_H.pdb'
+    os.mkdir(data_dir)
+
+    # download pdb and cif
+    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.pdb')
+    with open(pdb_file, 'w') as pdb:
+        pdb.write(response.text)
+    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
+    with open(f'{data_dir}/{code}.cif', 'w') as mmcif_file:
+        mmcif_file.write(response.text)
+
+    # protonate structure
+    os.system(f'/opt/venv/bin/pdb2pqr30 --log-level DEBUG --noopt --titration-state-method propka '
+              f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
+              f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
+
+    # optimize structure
+    PRO(f"{data_dir}/optimization",
+        pdb_file_with_hydrogens).optimize()
+    print(ID, " optimized ;)")
+
