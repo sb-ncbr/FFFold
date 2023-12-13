@@ -1,0 +1,45 @@
+{% extends 'base/base.html' %}
+
+{% block title %} FFFold – Job status {% endblock title %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='molstar.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock styles %}
+
+{% block body %}
+<div class="container mt-3 p-3">
+  <div class="row">
+    <div class="col">
+      <h1 style="margin-bottom:25px">
+        <strong><span style="color:tomato">FF</span><span style="color: #1E90FF">Fold – Calculation
+                        results</span></strong>
+      </h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-12 mt-0">
+        <strong> UniProt code:</strong> <a class="text-primary" href="https://alphafold.ebi.ac.uk/entry/{{ code }}" target="_blank"
+            rel="noreferrer"> <u>{{ code }}</u> </a>
+    </div>
+    <div class="col-12 mt-1">
+        <strong> pH:</strong> {{ ph }}
+    </div>
+    <div class="col-12 mt-1">
+        <strong> Job status:</strong> {{ status }}
+    </div>
+
+</div>
+</div>
+{% endblock body %}
+
+{% block scripts %}
+<script type="text/javascript">
+function reload() {
+  document.location.reload();
+}
+
+setTimeout(reload, 10000);
+</script>
+</div>
+{% endblock scripts %}

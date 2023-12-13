@@ -92,10 +92,10 @@
 <script src="{{ url_for('static', filename='molstar.js') }}"></script>
 <script src="{{ url_for('static', filename='main.js') }}"></script>
 <script>
-  const structure_url = '{{ url_for("get_structure", ID=ID, FORMAT="cif") }}';
+  const structure_url = '{{ url_for("get_optimized_structure", ID=ID) }}';
   const original_structure_url =
-    '{{ url_for("get_original_structure", ID=ID, FORMAT="pdb") }}';
-  const charges_url = '{{ url_for("get_residues_logs", ID=ID) }}';
-  init(structure_url, original_structure_url, charges_url);
+    '{{ url_for("get_original_structure", ID=ID) }}';
+  const residues_logs_url = '{{ url_for("get_residues_logs", ID=ID) }}';
+  init(structure_url, original_structure_url, residues_logs_url);
 </script>
 {% endblock scripts %}
