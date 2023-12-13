@@ -30,31 +30,25 @@
         </div>
         <hr>
         {% include 'base/flash.html' %}
-        <br>
-
-        <div class="row">
-            <div class="col-md-6 pl-0">
-        <div class="form-group col-sm-6 col-lg-3 pl-0">
-            <label style="color:black" for="title"><strong>UniProt code:</strong></label>
-            <input type="text" name="code" required="required" class="form-control" placeholder="e.g. P85371, L8BU87"
-                   title="UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. &#013; &#013; An alternative option is AlpfaFold DB Identifier (e.g. AF-P85371-F1).">
+        <div class="d-flex flex-row justify-content-between flex-wrap">
+            <div class="form-group">
+                <label class="font-weight-bold" for="title">
+                    UniProt code:
+                </label>
+                <input class="form-control" type="text" name="code" required="required" placeholder="e.g. P85371, L8BU87"
+                    title="UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. &#013; &#013; An alternative option is AlpfaFold DB Identifier (e.g. AF-P85371-F1)." />
+            </div>
+            <div class="form-group">
+                <label class="font-weight-bold" for="title">
+                    Protonate in pH:
+                </label>
+                <input class="form-control" type="number" min=0 max=14 step="0.1" name="ph"  value="7.2" />
+            </div>
         </div>
-        </div>
-
-        <div class="col-md-6">
-        <div class="form-group col-sm-6 col-lg-3 pl-0">
-                    <label style="color:black; font-weight:bold;" for="title">Protonate in pH:</label>
-                    <input type="number" min=0 max=14 step="0.1" name="ph" class="form-control" value="7.2">
-        </div>
-        </div>
-        </div>
-
-        <br>
-
-
-
         <div class="form-group">
-            <button type="submit" class="btn btn-primary" name="action" value="optimize structure">Optimize structure
+            <button type="submit" class="btn btn-primary" name="action" value="optimize structure">
+                Optimize structure
+            </button>
         </div>
     </form>
 
