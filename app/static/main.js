@@ -7,7 +7,7 @@ async function init(
   originalStructureUrl,
   residueLogsUrl
 ) {
-  context.init(optimizedStructureUrl, originalStructureUrl, residueLogsUrl);
+  await context.init(optimizedStructureUrl, originalStructureUrl, residueLogsUrl);
 
   mountViewControls();
   mountColorControls();
@@ -46,6 +46,11 @@ function mountViewControls() {
   surface.onclick = async () => await context.changeView("gaussian-surface");
   bas.onclick = async () => await context.changeView("ball-and-stick");
   nonOptimized.onclick = async () => await context.toggleVisibility();
+
+  cartoon.removeAttribute("disabled");
+  surface.removeAttribute("disabled");
+  bas.removeAttribute("disabled");
+  nonOptimized.removeAttribute("disabled");
 }
 
 function mountColorControls() {
@@ -57,4 +62,7 @@ function mountColorControls() {
   }
   structure.onclick = async () => await context.changeColor("element-symbol");
   alphafold.onclick = async () => await context.changeColor("plddt-confidence");
+
+  structure.removeAttribute("disabled");
+  alphafold.removeAttribute("disabled");
 }
