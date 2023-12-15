@@ -32,9 +32,9 @@ def submit_job(ID: str,
     return processes
 
 
-def create_mmcif(input_file, output_file, ID):
-    def _add_AF_confidence_score(write_block, ID: str):
-        response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-model_v4.cif')
+def create_mmcif(input_file, output_file, code):
+    def _add_AF_confidence_score(write_block, code: str):
+        response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
         document = gemmi.cif.read_string(response.text)
         block = document.sole_block()
 
@@ -60,7 +60,7 @@ def create_mmcif(input_file, output_file, ID):
     structure.assign_label_seq_id()
     block = structure.make_mmcif_block()
     block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-    _add_AF_confidence_score(block, ID)
+    _add_AF_confidence_score(block, code)
     block.write_file(output_file)
 
 
@@ -140,9 +140,6 @@ def main_site():
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
                 pdb.write(response.text)
-            response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
-            with open(f'{data_dir}/{code}.cif', 'w') as mmcif_file:
-                mmcif_file.write(response.text)
 
             # submit job
             global processes

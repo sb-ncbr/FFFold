@@ -19,7 +19,7 @@
                     rel="noreferrer">AlphaFold DB</a> database.
                 The structures are optimized by the <a
                     href="https://github.com/sb-ncbr/pro" target="_blank"
-                    rel="noreferrer">PPROpt method</a>, during which the position of the α-carbons does not change and which quality is comparable to protein structure optimization with
+                    rel="noreferrer">PPROpt method</a>, which quality is comparable to the optimization of whole protein structure with
                 constrained α-carbons. The details about the methodology and usage are
                 described in the <a href="https://github.com/sb-ncbr/FFFold/wiki" target="_blank"
                                     rel="noreferrer">manual</a>. This website is free and open to all users and there is
@@ -28,7 +28,10 @@
                                                                      target="_blank" rel="noreferrer">GitHub</a>.
             </div>
         </div>
-        <hr>
+
+
+<br>
+
         {% include 'base/flash.html' %}
         <div class="d-flex flex-row justify-content-between flex-wrap">
             <div class="form-group">
@@ -57,97 +60,8 @@
 
 
 <br>
-    <hr>
-    <br>
-    <div class="row">
-        <div class="col">
-            <h4>How <strong><span style="color:tomato">FF</span><span style="color: #1E90FF">Fold</span></strong> works:</h4>
-        </div>
-    </div>
-    <div class="row">
-                <div class="col-lg-4 pl-0">
-            <div class="col">
-                <strong>1) Protonation of structure</strong>
-            </div>
-            <div class="col text-align mt-3">
-                <img src="{{ url_for('static', filename='assets/favicon.ico') }}" alt="P-glycoprotein"
-                    style="height: 200px">
-            </div>
-            <div class="col mt-3 text-justify">
-                <small>
-                    First the latest version of the structure is downloaded from AlphaFold DB.
-                    However, the protein structures in AlphaFold DB contain only heavy atoms.
-                    The hydrogens in the structure are necessary for the correct result of the structure optimization.
-                    Therefore, hydrogens are before optimization added to the structure using the <a
-                    href="https://pubs.acs.org/doi/full/10.1021/ct100578z" target="_blank"
-                    rel="noreferrer">PDB2PQR/PROPKA3</a> tool.
-                    Since the behavior of some proteins (e.g., pepsin, tripsin) can vary depending on the pH (<a href="https://academic.oup.com/peds/article/14/9/669/1551528?login=false"
-                        target="_blank" rel="noreferrer">Tanaka2001</a>, <a
-                        href="https://www.sciencedirect.com/science/article/abs/pii/S0141022921001290?via%3Dihub"
-                        target="_blank" rel="noreferrer">Grahame2021</a>, <a href="https://www.ncbi.nlm.nih.gov/books/NBK537005/" target="_blank"
-                        rel="noreferrer">Heda2022</a>), the user can choose,
-                    at which pH the structure should be protonated.
-                </small>
-            </div>
-        </div>
 
-
-
-        <div class="col-lg-4 pl-0">
-            <div class="col">
-                <strong>2) Remove AlphaFold2 errors</strong>
-            </div>
-            <div class="col text-align mt-3">
-                <img src="{{ url_for('static', filename='assets/favicon.ico') }}" alt="P-glycoprotein"
-                    style="height: 200px">
-            </div>
-            <div class="col mt-3 text-justify">
-                <small>
-                    Protein structures in AlphaFold DB may contain various structural errors. These errors are removed in second step by
-                    <a href="https://www.rdkit.org/docs/GettingStartedInPython.html" target="_blank"
-                    rel="noreferrer">RDKit</a> and
-                    <a
-                    href="https://github.com/openmm/pdbfixer" target="_blank"
-                    rel="noreferrer">PDBFixer</a>. Typical errors are
-                    too large distance between bonded atoms (link, uniprotID, residue number) or, on the contrary,
-                    too small distance between atoms of two residues (link, uniprotID, residue number).
-                    Moreover, even the pdb2pqr tool exceptionally produces structural errors during protonation (link, uniprotID, residue number).
-                    According to our statistics, such structural errors are present in approximately 2% of the structures stored in Alphafold DB.
-                </small>
-            </div>
-        </div>
-        <div class="col-lg-4 pl-0">
-            <div class="col">
-                <strong>3) Optimize structure</strong>
-            </div>
-            <div class="col text-align mt-3">
-                <img src="{{ url_for('static', filename='assets/favicon.ico') }}" alt="P-glycoprotein"
-                    style="height: 200px">
-            </div>
-            <div class="col mt-3 text-justify">
-                <small>
-
-
-
-                    Alphafold2 predicts the positions of α-carbons with near-experimetal precision. However, it is no equal to physical methods in describing bond lengths, angles and interactions between atoms.
-                    The correct structure is often essential in further research (<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6539982/"
-                        target="_blank" rel="noreferrer">Adiyaman2019</a>).
-                    Therefore, in a third step, the structure is optimized by the <a
-                    href="https://github.com/sb-ncbr/ppropt" target="_blank"
-                    rel="noreferrer">PPROpt method</a> using partially polarizable <a
-                    href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
-                    rel="noreferrer">GFN-FF force-fields</a>.
-                    The PPROpt method preserves the positions of the α-carbons during optimization.
-
-
-
-
-                </small>
-            </div>
-        </div>
-
-    </div>
-    <hr>
+          <hr>
 
 
 
