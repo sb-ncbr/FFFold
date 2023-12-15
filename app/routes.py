@@ -121,7 +121,7 @@ def main_site():
 
         elif status in ["queued", "running"]:
             flash(Markup(f'Optimization of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
-                         f'For job status visit <a href="fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
+                         f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
             return render_template('index.html')
 

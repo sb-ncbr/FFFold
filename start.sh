@@ -1,18 +1,30 @@
 #!/bin/bash
 
 # update system and install deps
-sudo apt update -y && sudo apt upgrade -y && \
-    apt --y install python3-pip python3-venv apache2 libapache2-mod-wsgi-py3 git
+sudo apt update -y && sudo apt upgrade -y
+sudo apt -y install python3-pip python3-venv apache2 libapache2-mod-wsgi-py3 git
 
 # clone repo
 cd /opt
-sudo git clone --recurse-submodules -b stable --depth 1 https://github.com/sb-ncbr/FFFold
+sudo git clone --recurse-submodules --depth 1 https://github.com/sb-ncbr/FFFold
 
 # install python deps
 sudo python3 -m venv venv
 source venv/bin/activate
 sudo chown -R ubuntu:ubuntu /opt
 pip install -r FFFold/requirements.txt
+
+# install xtb and openbabel
+sudo mkdir -p miniconda3
+sudo wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda3/miniconda.sh
+sudo bash miniconda3/miniconda.sh -b -u -p miniconda3
+sudo rm miniconda3/miniconda.sh
+sudo miniconda3/bin/conda install -y -c conda-forge xtb
+sudo miniconda3/bin/conda install -y openbabel=3.1.1
+
+# set paths to xtb and openbabel in ppropt.py
+sudo sed -i -e 's/xtb repaired/\/opt\/miniconda3\/bin\/xtb repaired/g' /opt/FFFold/app/ppropt/ppropt.py
+sudo sed -i -e 's/obabel -h/\/opt\/miniconda3\/bin\/obabel -h/g' /opt/FFFold/app/ppropt/ppropt.py
 
 # setup web server
 sudo rm -f /etc/apache2/sites-available/*
