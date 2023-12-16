@@ -10,7 +10,7 @@
                     <strong><span style="color:tomato">FF</span><span style="color: #1E90FF">Fold</span></strong>
                 </h1>
                 <strong><span style="color:tomato">FF</span><span
-                        style="color: #1E90FF">Fold</span></strong> is a web application for the force-fields optimization of protein
+                        style="color: #1E90FF">Fold</span></strong> is a web application for the local optimization of protein
                 structures
                 predicted by
                 the <a href="https://www.nature.com/articles/s41586-021-03819-2" target="_blank"
@@ -18,9 +18,14 @@
                     href="https://academic.oup.com/nar/article/50/D1/D439/6430488" target="_blank"
                     rel="noreferrer">AlphaFold DB</a> database.
                 The structures are optimized by the <a
-                    href="https://github.com/sb-ncbr/pro" target="_blank"
-                    rel="noreferrer">PPROpt method</a>, which quality is comparable to the optimization of whole protein structure with
-                constrained α-carbons. The details about the methodology and usage are
+                    href="https://github.com/sb-ncbr/ppropt" target="_blank"
+                    rel="noreferrer">PPROpt method</a> powered by physics-based force-fields <a
+                    href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
+                    rel="noreferrer">GFN-FF</a>, which  results is comparable to the optimization of whole protein structure with
+                constrained α-carbons. Thus, <strong><span style="color:tomato">FF</span><span
+                        style="color: #1E90FF">Fold</span></strong> optimizes in particular the bond lengths and angles and describes the interactions between nearby residues as can be seen in examples.
+                Before computation of the charges, input protein structures is protonated by <a href="https://pubs.acs.org/doi/full/10.1021/ct100578z" target="_blank"
+                    rel="noreferrer">PROPKA3</a>. The details about the methodology and usage are
                 described in the <a href="https://github.com/sb-ncbr/FFFold/wiki" target="_blank"
                                     rel="noreferrer">manual</a>. This website is free and open to all users and there is
                 no login
@@ -57,13 +62,98 @@
 
 
 
-
-
 <br>
 
           <hr>
 
+<div class="row">
+        <div class="col">
+            <h4>Examples</h4>
+        </div>
 
+    </div>
+    <div class="row">
+        <div class="col-lg-4 pl-0">
+            <div class="col">
+                <strong>Dihedral angles</strong>
+            </div>
+            <div class="col text-align mt-3">
+                <img src="/static/assets/TA.png" alt="TA"
+                    style="height: 200px">
+            </div>
+            <div class="col mt-3 text-justify">
+                <small>
+                    The AlphaFold 2 and the subsequent PROPKA prediction often created a bond with a unnatural
+                    angle (e.g., peptide bond with almost right angle). <strong><span style="color:tomato">FF</span><span
+                        style="color: #1E90FF">Fold</span></strong> optimizes bond lengths and bond angles.
+                </small>
+            </div>
+            <div class="col text-center mt-3">
+                <form method=post enctype=multipart/form-data>
+                    <input type="hidden" name="ph" value='2' />
+                    <input type="hidden" name="code" value='B2UFK5' />
+                    <button type="submit" class="btn btn-primary" name="action"
+                        value="optimize structure">B2UFK5; residues 121, 122</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-4 pl-0">
+            <div class="col">
+                <strong>Hydrogen bonds</strong>
+            </div>
+            <div class="col text-align mt-3">
+                <img src="/static/assets/HB.png" alt="HB"
+                    style="height: 200px">
+            </div>
+            <div class="col mt-3 text-justify">
+                <small>
+                   Hydrogen bonds are important contributors to the secondary and partly also to the tertiary structure of the protein.
+                    During <strong><span style="color:tomato">FF</span><span
+                        style="color: #1E90FF">Fold</span></strong> optimization, a large number of hydrogen bonds are formed/refined in the structure.
+                </small>
+            </div>
+            <div class="col text-center mt-3">
+                <form method=post enctype=multipart/form-data>
+                    <input type="hidden" name="ph" value='7.2' />
+                    <input type="hidden" name="code" value='L8BU87' />
+                    <button type="submit" class="btn btn-primary" name="action"
+                        value="optimize structure">L8BU87; residue 19</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4 pl-0">
+            <div class="col">
+                <strong>π–π stacking</strong>
+            </div>
+            <div class="col text-align mt-3">
+                <img src="/static/assets/PS.png" alt="PS"
+                    style="height: 200px">
+            </div>
+            <div class="col mt-3 text-justify">
+                <small>
+                    The π-π interaction stabilizes the secondary and tertiary structure of the protein.
+                    Also these interactions can be described because force-fields GFN-FF retains an iterative Hückel quantum-mechanical scheme
+                    for aromatic atoms.
+
+                </small>
+            </div>
+            <div class="col text-center mt-3">
+                <form method=post enctype=multipart/form-data>
+                    <input type="hidden" name="ph" value='13' />
+                    <input type="hidden" name="prediction_version" value='4' />
+                    <input type="hidden" name="code" value='A4QBG9' />
+                    <button type="submit" class="btn btn-primary" name="action"
+                        value="calculate charges">A4QBG9; residues 233, 234</button>
+                </form>
+            </div>
+        </div>
+
+
+
+
+    </div>
+    <hr>
 
 
 
