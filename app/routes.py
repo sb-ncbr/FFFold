@@ -187,6 +187,7 @@ def download_files():
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
         zip.write(f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb',f'{code}_optimized.pdb')
         zip.write(f'{data_dir}/optimization/optimized_CIF/{code}_added_H_optimized.cif', f'{code}_optimized.cif')
+        zip.write(f'{data_dir}/optimization/inputed_PDB/{code}_added_H.pdb', f'{code}_original.pdb')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
