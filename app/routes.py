@@ -18,18 +18,9 @@ application.config['SECRET_KEY'] = str(random())
 root_dir = os.path.dirname(os.path.abspath(__file__))
 
 queue = Manager().list()
-processes = []
+running = Manager().list()
+optimizers = []
 
-
-def submit_job(ID: str,
-               queue: list,
-               processes: list):
-    queue.append(ID)
-    if len(processes) < 8:
-        job = Process(target=optimize_structures, args=(queue,))
-        job.start()
-        processes.append(job)
-    return processes
 
 
 def create_mmcif(input_file, output_file, code):
@@ -64,9 +55,10 @@ def create_mmcif(input_file, output_file, code):
     block.write_file(output_file)
 
 
-def optimize_structures(queue: list):
+def optimize_structures():
     while len(queue):
         ID = queue.pop(0)
+        running.append(ID)
         code, ph = ID.split('_')
         data_dir = f'{root_dir}/calculated_structures/{ID}'
         pdb_file = f'{data_dir}/{code}.pdb'
@@ -87,6 +79,7 @@ def optimize_structures(queue: list):
         output_file = f'{output_dir}/{code}_added_H_optimized.cif'
         os.mkdir(output_dir)
         create_mmcif(input_file, output_file, code)
+        running.remove(ID)
 
 
 def job_status(ID: str):
@@ -127,7 +120,7 @@ def main_site():
 
         elif status == "unsubmitted":
 
-            # download pdb and cif
+            # download pdb
             response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.pdb')
             if response.status_code != 200:
                 flash(Markup(f'The structure with code <strong>{code}</strong> '
@@ -137,14 +130,19 @@ def main_site():
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
                 return render_template('index.html')
             data_dir = f'{root_dir}/calculated_structures/{ID}'
+            calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.14
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
                 pdb.write(response.text)
 
-            # submit job
-            global processes
-            processes = [process for process in processes if process.is_alive()]
-            submit_job(ID, queue, processes)
+            # create and submit job
+            global optimizers
+            optimizers = [optimizer for optimizer in optimizers if optimizer.is_alive()]
+            queue.append(ID)
+            if len(optimizers) < 8:
+                optimizer = Process(target=optimize_structures)
+                optimizer.start()
+                optimizers.append(optimizer)
             return redirect(url_for('results', ID=ID))
 
     return render_template('index.html')

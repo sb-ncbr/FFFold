@@ -7,9 +7,9 @@
         <div class="row">
             <div class="col">
                 <h1 style="margin-bottom:25px">
-                    <strong><span style="color:tomato">FF</span><span style="color: #1E90FF">Fold</span></strong>
+                    <strong><span style="color: #0000CC">FF</span><span style="color: #1E90FF">Fold</span></strong>
                 </h1>
-                <strong><span style="color:tomato">FF</span><span
+                <strong><span style="color:#0000CC">FF</span><span
                         style="color: #1E90FF">Fold</span></strong> is a web application for the local optimization of protein
                 structures
                 predicted by
@@ -22,7 +22,7 @@
                     rel="noreferrer">PPROpt method</a> powered by physics-based force-fields <a
                     href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
                     rel="noreferrer">GFN-FF</a>, which  results is comparable to the optimization of whole protein structure with
-                constrained α-carbons. Thus, <strong><span style="color:tomato">FF</span><span
+                constrained α-carbons. Thus, <strong><span style="color: #0000CC">FF</span><span
                         style="color: #1E90FF">Fold</span></strong> optimizes in particular the bond lengths and angles and describes the interactions between nearby residues as can be seen in examples.
                 Before computation of the charges, input protein structures is protonated by <a href="https://pubs.acs.org/doi/full/10.1021/ct100578z" target="_blank"
                     rel="noreferrer">PROPKA3</a>. The details about the methodology and usage are
@@ -68,7 +68,9 @@
 
 <div class="row">
         <div class="col">
+            <br>
             <h4>Examples</h4>
+
         </div>
 
     </div>
@@ -84,7 +86,7 @@
             <div class="col mt-3 text-justify">
                 <small>
                     The AlphaFold 2 and the subsequent PROPKA prediction often created a bond with a unnatural
-                    angle (e.g., peptide bond with almost right angle). <strong><span style="color:tomato">FF</span><span
+                    angle (e.g., peptide bond with almost right angle). <strong><span style="color: #0000CC">FF</span><span
                         style="color: #1E90FF">Fold</span></strong> optimizes bond lengths and bond angles.
                 </small>
             </div>
@@ -108,7 +110,7 @@
             <div class="col mt-3 text-justify">
                 <small>
                    Hydrogen bonds are important contributors to the secondary and partly also to the tertiary structure of the protein.
-                    During <strong><span style="color:tomato">FF</span><span
+                    During <strong><span style="color: #0000CC">FF</span><span
                         style="color: #1E90FF">Fold</span></strong> optimization, a large number of hydrogen bonds are formed/refined in the structure.
                 </small>
             </div>
@@ -117,7 +119,7 @@
                     <input type="hidden" name="ph" value='7.2' />
                     <input type="hidden" name="code" value='L8BU87' />
                     <button type="submit" class="btn btn-primary" name="action"
-                        value="optimize structure">L8BU87; residue 19</button>
+                        value="optimize structure">L8BU87; residues 19, 35, 36</button>
                 </form>
             </div>
         </div>
@@ -153,6 +155,8 @@
 
 
     </div>
+                <br>
+
     <hr>
 
 
@@ -162,7 +166,7 @@
 
 
     {% include 'base/elixir.html' %}
-    <hr>
+
     {% include 'base/footer.html' %}
 </div>
 {% endblock body %}
