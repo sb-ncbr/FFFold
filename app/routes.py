@@ -141,7 +141,7 @@ def main_site():
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
                 return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
             data_dir = f'{root_dir}/calculated_structures/{ID}'
-            calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.14
+            calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.2
             calculation_times[ID] = calculation_time
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
