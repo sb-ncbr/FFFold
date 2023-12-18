@@ -6,14 +6,14 @@
     <form method=post enctype=multipart/form-data>
         <div class="row">
             <div class="col">
-                <div class="d-flex flex-row justify-content-between flex-wrap">
-                    <h1 style="margin-bottom:25px">
+                <div class="d-flex flex-row justify-content-between flex-wrap mb-3">
+                    <h1>
                         <strong><span style="color: #0000CC">FF</span><span style="color: #1E90FF">Fold</span></strong>
                     </h1>
-                    <div class="d-flex flex-column">
-                        <span style="font-size: 13px"><strong>Status:</strong> {{ "BUSY" }}</span>
-                        <span style="font-size: 13px"><strong>Running tasks:</strong> {{ "10" }}</span>
-                        <span style="font-size: 13px"><strong>Tasks in queue:</strong> {{ "3" }}</span>
+                    <div class="d-flex flex-column border border-primary">
+                        <span style="font-size: 13px"><strong>Status:</strong> {{ status }}</span>
+                        <span style="font-size: 13px"><strong>Running tasks:</strong> {{ running }}</span>
+                        <span style="font-size: 13px"><strong>Tasks in queue:</strong> {{ queued }}</span>
                     </div>
                 </div>
                 <div class="text-justify">
@@ -182,4 +182,10 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
 <script src="{{ url_for('static', filename='bootstrap/bootstrap.bundle.min.js') }}"></script>
+<script type="text/javascript">
+function reload() {
+  document.location.reload();
+}
+setInterval(reload, 60000);
+</script>
 {% endblock scripts %}

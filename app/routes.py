@@ -1,7 +1,6 @@
 import gemmi
 import os
 import requests
-import requests
 import zipfile
 from datetime import datetime
 from flask import render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
@@ -18,9 +17,10 @@ application.config['SECRET_KEY'] = str(random())
 root_dir = os.path.dirname(os.path.abspath(__file__))
 
 queue = Manager().list()
-running = Manager().list()
+calculation_times = Manager().dict()
+running = Manager().dict()
 optimizers = []
-
+number_of_processes = 8
 
 
 def create_mmcif(input_file, output_file, code):
@@ -58,7 +58,7 @@ def create_mmcif(input_file, output_file, code):
 def optimize_structures():
     while len(queue):
         ID = queue.pop(0)
-        running.append(ID)
+        running[ID] = time() + calculation_times[ID]
         code, ph = ID.split('_')
         data_dir = f'{root_dir}/calculated_structures/{ID}'
         pdb_file = f'{data_dir}/{code}.pdb'
@@ -79,28 +79,39 @@ def optimize_structures():
         output_file = f'{output_dir}/{code}_added_H_optimized.cif'
         os.mkdir(output_dir)
         create_mmcif(input_file, output_file, code)
-        running.remove(ID)
+        del running[ID]
+        del calculation_times[ID]
 
 
 def job_status(ID: str):
     if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'):
         return "finished"
     elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
-        if ID in [job[0] for job in queue]:
+        if ID in queue:
             return "queued"
         else:
             return "running"
     return "unsubmitted"
 
+def server_status():
+    if len(running) == 0:
+        return "FREE"
+    elif len(running) < number_of_processes:
+        return "PARTIALLY FREE"
+    else:
+        return "BUSY"
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
+
     if request.method == 'POST':
 
         # load user input
         code = request.form['code'].strip().upper()  # UniProt code, not case-sensitive
         code = code.replace("AF-","").replace("-F1", "")  # Also AlphaFold DB identifiers are supproted (e.g. AF-A8H2R3-F1)
         ph = request.form['ph']
+        if "." not in ph:
+            ph = ph + ".0"
         ID = f'{code}_{ph}'
 
         # log access
@@ -116,7 +127,7 @@ def main_site():
             flash(Markup(f'Optimization of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
                          f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
-            return render_template('index.html')
+            return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
 
         elif status == "unsubmitted":
 
@@ -128,9 +139,10 @@ def main_site():
                              f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                              f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
-                return render_template('index.html')
+                return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
             data_dir = f'{root_dir}/calculated_structures/{ID}'
             calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.14
+            calculation_times[ID] = calculation_time
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
                 pdb.write(response.text)
@@ -139,13 +151,14 @@ def main_site():
             global optimizers
             optimizers = [optimizer for optimizer in optimizers if optimizer.is_alive()]
             queue.append(ID)
-            if len(optimizers) < 8:
+            if len(optimizers) < number_of_processes:
                 optimizer = Process(target=optimize_structures)
                 optimizer.start()
                 optimizers.append(optimizer)
             return redirect(url_for('results', ID=ID))
 
-    return render_template('index.html')
+    return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
+
 
 
 @application.route('/results')
@@ -165,8 +178,42 @@ def results():
         flash(Markup(f'There are no results for structure with UniProt <strong>{code}</strong> and pH <strong>{ph}</strong>.'), 'danger')
         return redirect(url_for('main_site'))
 
-    elif status in ["queued", "running"]:
+    if status == "queued":
+        job_times = [finish_time-time() for finish_time in running.values()]
+        for queued_job_ID in queue:
+            job_times.append(calculation_times[queued_job_ID])
+            if queued_job_ID == ID:
+                break
+        remaining_seconds = int(sum(job_times))
+        remaining_minutes, remaining_seconds = divmod(remaining_seconds, 60)
+        remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
+        time_string = ""
+        if remaining_hours:
+            time_string += f"{remaining_hours} hour{'s' if remaining_hours > 1 else ''}, "
+        if remaining_minutes:
+            time_string += f"{remaining_minutes} minute{'s' if remaining_minutes > 1 else ''} and "
+        time_string += f"{remaining_seconds} seconds"
+        status = f"Optimization is queued. Expected finish in {time_string}."
         return render_template('queued.html',
+                               code=code,
+                               ph=ph,
+                               status=status)
+
+    elif status == "running":
+        remaining_seconds = int(running[ID]-time())
+        if remaining_seconds < 0:
+            status += " (The task takes an unusually long time. Wait, please.)"
+        else:
+            remaining_minutes, remaining_seconds = divmod(remaining_seconds, 60)
+            remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
+            time_string = ""
+            if remaining_hours:
+                time_string += f"{remaining_hours} hour{'s' if remaining_hours>1 else ''}, "
+            if remaining_minutes:
+                time_string += f"{remaining_minutes} minute{'s' if remaining_minutes>1 else ''} and "
+            time_string += f"{remaining_seconds} seconds"
+            status = f"Optimization is running. Expected finish in {time_string}."
+        return render_template('running.html',
                                code=code,
                                ph=ph,
                                status=status)
