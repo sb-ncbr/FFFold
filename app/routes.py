@@ -62,7 +62,7 @@ def optimize_structures():
         pdb_file_with_hydrogens = f'{data_dir}/{code}_added_H.pdb'
 
         # protonate structure
-        os.system(f'/opt/venv/bin/pdb2pqr30 --log-level DEBUG --noopt --titration-state-method propka '
+        os.system(f'/opt/venv/bin/pdb2pqr30 --log-level DEBUG --titration-state-method propka '
                   f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
@@ -176,7 +176,7 @@ def results():
             job_times.append(calculation_times[queued_job_ID])
             if queued_job_ID == ID:
                 break
-        remaining_seconds = int(sum(job_times))
+        remaining_seconds = int(sum(job_times)/number_of_processes)
         remaining_minutes, remaining_seconds = divmod(remaining_seconds, 60)
         remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
         time_string = ""
