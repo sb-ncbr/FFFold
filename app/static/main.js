@@ -11,6 +11,7 @@ async function init(
 
   mountViewControls();
   mountColorControls();
+  disableMolstarButtons();
 
   const bas = document.getElementById("view_bas");
   const structure = document.getElementById("colors_structure");
@@ -65,4 +66,21 @@ function mountColorControls() {
 
   structure.removeAttribute("disabled");
   alphafold.removeAttribute("disabled");
+}
+
+function disableMolstarButtons() {
+  const settingsButton = document.querySelector(
+    "#root > div > div.relative.grow > div > div.msp-viewport-controls > div > div:nth-child(3) > button.msp-btn.msp-btn-icon.msp-btn-link-toggle-on"
+  );
+  const expandButton = document.querySelector(
+    "#root > div > div.relative.grow > div > div.msp-viewport-controls > div > div:nth-child(3) > button:nth-child(3)"
+  );
+
+  if (!settingsButton || !expandButton) {
+    console.error("Molstar buttons not found");
+    return;
+  }
+
+  settingsButton.setAttribute("disabled", "true");
+  expandButton.setAttribute("disabled", "true");
 }
