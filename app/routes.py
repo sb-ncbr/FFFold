@@ -23,40 +23,37 @@ optimizers = []
 number_of_processes = 8
 
 
-def create_mmcif(input_file, output_file, code):
-    def _add_AF_confidence_score(write_block, code: str):
-        response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
-        document = gemmi.cif.read_string(response.text)
-        block = document.sole_block()
-
-        ma_qa_metric_prefix = '_ma_qa_metric'
-        ma_qa_metric_local_prefix = '_ma_qa_metric_local'
-        ma_qa_metric_global_prefix = '_ma_qa_metric_global'
-
-        categories = {
-            ma_qa_metric_prefix: block.get_mmcif_category(ma_qa_metric_prefix),
-            ma_qa_metric_local_prefix: block.get_mmcif_category(ma_qa_metric_local_prefix),
-            ma_qa_metric_global_prefix: block.get_mmcif_category(ma_qa_metric_global_prefix)
-        }
-
-        asym_id = write_block.get_mmcif_category('_struct_asym').get('id')[0]
-
-        length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
-        categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
-
-        for name, data in categories.items():
-            write_block.set_mmcif_category(name, data)
-    structure = gemmi.read_pdb(input_file)
+def create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code):
+    structure = gemmi.read_pdb(optimized_PDB_file)
     structure.setup_entities()
     structure.assign_label_seq_id()
     block = structure.make_mmcif_block()
     block.find_mmcif_category('_chem_comp.').erase() # remove pesky _chem_comp category >:(
-    _add_AF_confidence_score(block, code)
-    block.write_file(output_file)
+    response = requests.get(f'https://alphafold.ebi.ac.uk/files/AF-{code}-F1-model_v4.cif')
+    with open(original_CIF_file, 'w') as cif_file:
+        cif_file.write(response.text)
+    document = gemmi.cif.read_string(response.text)
+    sole_block = document.sole_block()
+    ma_qa_metric_prefix = '_ma_qa_metric'
+    ma_qa_metric_local_prefix = '_ma_qa_metric_local'
+    ma_qa_metric_global_prefix = '_ma_qa_metric_global'
+    categories = {
+        ma_qa_metric_prefix: sole_block.get_mmcif_category(ma_qa_metric_prefix),
+        ma_qa_metric_local_prefix: sole_block.get_mmcif_category(ma_qa_metric_local_prefix),
+        ma_qa_metric_global_prefix: sole_block.get_mmcif_category(ma_qa_metric_global_prefix)
+    }
+    asym_id = block.get_mmcif_category('_struct_asym').get('id')[0]
+    length = len(categories[ma_qa_metric_local_prefix]['label_asym_id'])
+    categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
+    for name, data in categories.items():
+        block.set_mmcif_category(name, data)
+    block.write_file(optimized_CIF_file)
 
 
 def optimize_structures():
     while len(queue):
+        from time import time
+        s = time()
         ID = queue.pop(0)
         running[ID] = time() + calculation_times[ID]
         code, ph = ID.split('_')
@@ -74,13 +71,16 @@ def optimize_structures():
             pdb_file_with_hydrogens).optimize()
 
         # create mmcif
-        input_file = f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb'
-        output_dir = f'{data_dir}/optimization/optimized_CIF'
-        output_file = f'{output_dir}/{code}_added_H_optimized.cif'
-        os.mkdir(output_dir)
-        create_mmcif(input_file, output_file, code)
+        optimized_PDB_file = f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb'
+        optimized_CIF_dir = f'{data_dir}/optimization/optimized_CIF'
+        os.mkdir(optimized_CIF_dir)
+        optimized_CIF_file = f'{optimized_CIF_dir}/{code}_added_H_optimized.cif'
+        original_CIF_file = f'{data_dir}/{code}.cif'
+        create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code)
         del running[ID]
         del calculation_times[ID]
+        with open(f"{data_dir}/calculation_time.txt", "w") as ct:
+            ct.write(str(time()-s))
 
 
 def job_status(ID: str):
@@ -92,14 +92,6 @@ def job_status(ID: str):
         else:
             return "running"
     return "unsubmitted"
-
-def server_status():
-    if len(running) == 0:
-        return "FREE"
-    elif len(running) < number_of_processes:
-        return "PARTIALLY FREE"
-    else:
-        return "BUSY"
 
 @application.route('/', methods=['GET', 'POST'])
 def main_site():
@@ -127,7 +119,7 @@ def main_site():
             flash(Markup(f'Optimization of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
                          f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
-            return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
+            return render_template('index.html', running=len(running), queued=len(queue))
 
         elif status == "unsubmitted":
 
@@ -139,7 +131,7 @@ def main_site():
                              f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                              f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
-                return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
+                return render_template('index.html', running=len(running), queued=len(queue))
             data_dir = f'{root_dir}/calculated_structures/{ID}'
             calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.2
             calculation_times[ID] = calculation_time
@@ -157,7 +149,7 @@ def main_site():
                 optimizers.append(optimizer)
             return redirect(url_for('results', ID=ID))
 
-    return render_template('index.html', status=server_status(), running=len(running), queued=len(queue))
+    return render_template('index.html', running=len(running), queued=len(queue))
 
 
 
@@ -232,7 +224,8 @@ def download_files():
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
         zip.write(f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb',f'{code}_optimized.pdb')
         zip.write(f'{data_dir}/optimization/optimized_CIF/{code}_added_H_optimized.cif', f'{code}_optimized.cif')
-        zip.write(f'{data_dir}/optimization/inputed_PDB/{code}_added_H.pdb', f'{code}_original.pdb')
+        zip.write(f'{data_dir}/{code}.pdb', f'{code}_original.pdb')
+        zip.write(f'{data_dir}/{code}.cif', f'{code}_original.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
