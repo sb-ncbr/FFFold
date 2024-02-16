@@ -17,10 +17,10 @@
 }
 
 #bar-container {
-    width: 400px;
+    width: 100%;
     height: 20px;
-    position: absolute;
-    left: 15px;
     top: 30px;
-    outline: #1E90FF solid 1px;
+    outline: #1e8fff9a solid 1px;
+    border-radius: .25rem;
+    margin: 0px 15px 0px 15px;
   }
