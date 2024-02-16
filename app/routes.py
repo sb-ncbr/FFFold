@@ -205,9 +205,16 @@ def results():
                 time_string += f"{remaining_minutes} minute{'s' if remaining_minutes>1 else ''} and "
             time_string += f"{remaining_seconds} seconds"
             status = f"Optimization is running. Expected finish in {time_string}."
+            from glob import glob
+            n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*'))
+            total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][23:26])
+            percent_value = round(n_optimized_residues/(total_n_residues*0.01))
+            percent_text = f"{n_optimized_residues}/{total_n_residues}"
         return render_template('running.html',
                                code=code,
                                ph=ph,
+                               percent_value = percent_value,
+                               percent_text = percent_text,
                                status=status)
 
     return render_template('results.html',
