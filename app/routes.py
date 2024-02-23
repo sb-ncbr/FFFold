@@ -76,7 +76,7 @@ def optimize_structures():
         optimized_CIF_file = f'{optimized_CIF_dir}/{code}_added_H_optimized.cif'
         original_CIF_file = f'{data_dir}/{code}.cif'
         create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code)
-
+        running.remove(ID)
         with open(f"{data_dir}/calculation_time.txt", "w") as ct:
             ct.write(str(time()-s))
 
@@ -173,7 +173,7 @@ def results():
                                ph=ph)
 
     elif status == "running":
-        n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*'))
+        n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*/xtbopt.pdb'))
         total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][23:26])
         percent_value = round(n_optimized_residues/(total_n_residues*0.01))
         percent_text = f"{n_optimized_residues}/{total_n_residues}"
