@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
 from multiprocessing import Process, Manager
 from random import random
+from glob import glob
 from time import time
 
 from ppropt.ppropt import PRO
@@ -17,11 +18,11 @@ application.config['SECRET_KEY'] = str(random())
 root_dir = os.path.dirname(os.path.abspath(__file__))
 
 queue = Manager().list()
-calculation_times = Manager().dict()
-running = Manager().dict()
+running = Manager().list()
 optimizers = []
-number_of_processes = 8
-
+number_of_processes = 1
+number_of_cpu = 32
+time_per_residuum = 0.06
 
 def create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code):
     structure = gemmi.read_pdb(optimized_PDB_file)
@@ -52,10 +53,9 @@ def create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code
 
 def optimize_structures():
     while len(queue):
-        from time import time
         s = time()
         ID = queue.pop(0)
-        running[ID] = time() + calculation_times[ID]
+        running.append(ID)
         code, ph = ID.split('_')
         data_dir = f'{root_dir}/calculated_structures/{ID}'
         pdb_file = f'{data_dir}/{code}.pdb'
@@ -67,8 +67,7 @@ def optimize_structures():
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
         # optimize structure
-        PRO(f"{data_dir}/optimization",
-            pdb_file_with_hydrogens).optimize()
+        PRO(f"{data_dir}/optimization", pdb_file_with_hydrogens, number_of_cpu).optimize()
 
         # create mmcif
         optimized_PDB_file = f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb'
@@ -77,8 +76,7 @@ def optimize_structures():
         optimized_CIF_file = f'{optimized_CIF_dir}/{code}_added_H_optimized.cif'
         original_CIF_file = f'{data_dir}/{code}.cif'
         create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code)
-        del running[ID]
-        del calculation_times[ID]
+
         with open(f"{data_dir}/calculation_time.txt", "w") as ct:
             ct.write(str(time()-s))
 
@@ -133,8 +131,6 @@ def main_site():
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
                 return render_template('index.html', running=len(running), queued=len(queue))
             data_dir = f'{root_dir}/calculated_structures/{ID}'
-            calculation_time = len([line for line in response.text.split("\n") if line[:4] == "ATOM"])*2*0.2
-            calculation_times[ID] = calculation_time
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
                 pdb.write(response.text)
@@ -171,51 +167,22 @@ def results():
         return redirect(url_for('main_site'))
 
     if status == "queued":
-        job_times = [finish_time-time() for finish_time in running.values()]
-        for queued_job_ID in queue:
-            job_times.append(calculation_times[queued_job_ID])
-            if queued_job_ID == ID:
-                break
-        remaining_seconds = int(sum(job_times)/number_of_processes)
-        remaining_minutes, remaining_seconds = divmod(remaining_seconds, 60)
-        remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
-        time_string = ""
-        if remaining_hours:
-            time_string += f"{remaining_hours} hour{'s' if remaining_hours > 1 else ''}, "
-        if remaining_minutes:
-            time_string += f"{remaining_minutes} minute{'s' if remaining_minutes > 1 else ''} and "
-        time_string += f"{remaining_seconds} seconds"
-        status = f"Optimization is queued. Expected finish in {time_string}."
+        status = f"Optimization is queued."
         return render_template('queued.html',
                                code=code,
-                               ph=ph,
-                               status=status)
+                               ph=ph)
 
     elif status == "running":
-        remaining_seconds = int(running[ID]-time())
-        if remaining_seconds < 0:
-            status += " (The task takes an unusually long time. Wait, please.)"
-        else:
-            remaining_minutes, remaining_seconds = divmod(remaining_seconds, 60)
-            remaining_hours, remaining_minutes = divmod(remaining_minutes, 60)
-            time_string = ""
-            if remaining_hours:
-                time_string += f"{remaining_hours} hour{'s' if remaining_hours>1 else ''}, "
-            if remaining_minutes:
-                time_string += f"{remaining_minutes} minute{'s' if remaining_minutes>1 else ''} and "
-            time_string += f"{remaining_seconds} seconds"
-            status = f"Optimization is running. Expected finish in {time_string}."
-            from glob import glob
-            n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*'))
-            total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][23:26])
-            percent_value = round(n_optimized_residues/(total_n_residues*0.01))
-            percent_text = f"{n_optimized_residues}/{total_n_residues}"
+        n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*'))
+        total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][23:26])
+        percent_value = round(n_optimized_residues/(total_n_residues*0.01))
+        percent_text = f"{n_optimized_residues}/{total_n_residues}"
         return render_template('running.html',
                                code=code,
                                ph=ph,
                                percent_value = percent_value,
                                percent_text = percent_text,
-                               status=status)
+                               time = (total_n_residues - n_optimized_residues) * time_per_residuum)
 
     return render_template('results.html',
                            ID=ID,
