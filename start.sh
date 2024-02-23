@@ -23,8 +23,8 @@ sudo miniconda3/bin/conda install -y -c conda-forge xtb
 sudo miniconda3/bin/conda install -y openbabel=3.1.1
 
 # set paths to xtb and openbabel in ppropt.py
-sudo sed -i -e 's/xtb repaired/\/opt\/miniconda3\/bin\/xtb repaired/g' /opt/FFFold/app/ppropt/ppropt.py
-sudo sed -i -e 's/obabel -h/\/opt\/miniconda3\/bin\/obabel -h/g' /opt/FFFold/app/ppropt/ppropt.py
+sudo sed -i -e 's/xtb substructure/\/opt\/miniconda3\/bin\/xtb substructure/g' /opt/FFFold/app/ppropt/ppropt.py
+#sudo sed -i -e 's/obabel -h/\/opt\/miniconda3\/bin\/obabel -h/g' /opt/FFFold/app/ppropt/ppropt.py
 
 # setup web server
 sudo rm -f /etc/apache2/sites-available/*
