@@ -174,7 +174,7 @@ def results():
 
     elif status == "running":
         n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*/xtbopt.pdb'))
-        total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][23:26])
+        total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][22:26])
         percent_value = round(n_optimized_residues/(total_n_residues*0.01))
         percent_text = f"{n_optimized_residues}/{total_n_residues}"
         return render_template('running.html',
