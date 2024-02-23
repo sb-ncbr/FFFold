@@ -181,8 +181,7 @@ def results():
                                code=code,
                                ph=ph,
                                percent_value = percent_value,
-                               percent_text = percent_text,
-                               time = (total_n_residues - n_optimized_residues) * time_per_residuum)
+                               percent_text = percent_text)
 
     return render_template('results.html',
                            ID=ID,
