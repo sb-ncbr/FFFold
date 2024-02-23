@@ -13,43 +13,43 @@
     <div class="col">
       <h1 style="margin-bottom:25px">
         <strong><span style="color: #0000CC">FF</span><span style="color: #1E90FF">Fold – Optimization
-                        status</span></strong>
+            status</span></strong>
       </h1>
     </div>
   </div>
   <div class="row">
     <div class="col-12 mt-0">
-        <strong> UniProt code:</strong> <a class="text-primary" href="https://alphafold.ebi.ac.uk/entry/{{ code }}" target="_blank"
+      <strong> UniProt code:</strong> <a class="text-primary" href="https://alphafold.ebi.ac.uk/entry/{{ code }}" target="_blank"
             rel="noreferrer"> <u>{{ code }}</u> </a>
     </div>
     <div class="col-12 mt-1">
-        <strong> pH:</strong> {{ ph }}
+      <strong> pH:</strong> {{ ph }}
 
     </div>
 
 
-    <div class="col-12 mt-1"><br>
-        Optimization is running. Expected finish in {{ time }} seconds.
+    <div class="col-12 mt-1" style="margin-bottom: 30px;"><br>
+      Optimization is running. Expected finish in {{ time }} seconds.
     </div>
 
     <div id="bar-container"></div>
-</div>
+      </div>
 
-    <br>
-    <br>
+  <br>
+  <br>
 
-      <br>
-      <hr>
-<br>
+  <br>
+  <hr>
+  <br>
 
-      <div class="col text-right">
-      <a href="{{ url_for('main_site') }}" class="btn btn-primary">Back to main page</a>
-    </div>
-    <br>
+  <div class="col text-right">
+    <a href="{{ url_for('main_site') }}" class="btn btn-primary">Back to main page</a>
+  </div>
+  <br>
 
-          <div class="col text-right">
-          Save page url to access optimization results!
-          </div>
+  <div class="col text-right">
+    Save page url to access optimization results!
+  </div>
 
 
 </div>
@@ -58,10 +58,10 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/progressbar.js') }}"></script>
 <script type="text/javascript">
-function reload() {
-  document.location.reload();
-}
-setInterval(reload, 5000);
+  function reload() {
+    document.location.reload();
+  }
+  setInterval(reload, 5000);
 
   var bar = new ProgressBar.Line('#bar-container', {
     strokeWidth: 1,
@@ -72,23 +72,24 @@ setInterval(reload, 5000);
       borderRadius: '.25rem'
     },
     text: {
+      value: '{{percent_text}}',
       style: {
         color: '#00',
-        position: 'absolute',
-        left: '50%',
-        top: '50%',
-        padding: 0,
-        margin: 0,
-        transform: {
-          prefix: true,
-          value: 'translate(-50%, -50%)'
-        }
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      padding: 0,
+      margin: 0,
+      transform: {
+        prefix: true,
+        value: 'translate(-50%, -50%)'
       }
     }
+  }
   });
 
   bar.set('{{percent_value}}' / 100)
-  bar.setText('{{percent_text}}')
+  // bar.setText('{{percent_text}}')
 </script>
 </div>
 {% endblock scripts %}
