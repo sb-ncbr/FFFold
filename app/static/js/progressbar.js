@@ -74,7 +74,7 @@
                * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
                */
 
-              /** Used as the size to enable large array optimizations. */
+              /** Used as the size to enable large array optimisations. */
               var LARGE_ARRAY_SIZE = 200;
 
               /** Used to stand-in for `undefined` hash values. */
@@ -1001,7 +1001,7 @@
               }
 
               /**
-               * The base implementation of `_.isTypedArray` without Node.js optimizations.
+               * The base implementation of `_.isTypedArray` without Node.js optimisations.
                *
                * @private
                * @param {*} value The value to check.

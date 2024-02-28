@@ -8,8 +8,8 @@ from multiprocessing import Process, Manager
 from random import random
 from glob import glob
 from time import time
-
 from ppropt.ppropt import PRO
+
 
 application = Flask(__name__)
 application.jinja_env.trim_blocks = True
@@ -19,13 +19,13 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 
 queue = Manager().list()
 running = Manager().list()
-optimizers = []
+optimisers = []
 number_of_processes = 1
 number_of_cpu = 32
-time_per_residuum = 0.06
 
-def create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code):
-    structure = gemmi.read_pdb(optimized_PDB_file)
+
+def create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code):
+    structure = gemmi.read_pdb(optimised_PDB_file)
     structure.setup_entities()
     structure.assign_label_seq_id()
     block = structure.make_mmcif_block()
@@ -48,12 +48,11 @@ def create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code
     categories[ma_qa_metric_local_prefix]['label_asym_id'] = [asym_id] * length
     for name, data in categories.items():
         block.set_mmcif_category(name, data)
-    block.write_file(optimized_CIF_file)
+    block.write_file(optimised_CIF_file)
 
 
-def optimize_structures():
+def optimise_structures():
     while len(queue):
-        s = time()
         ID = queue.pop(0)
         running.append(ID)
         code, ph = ID.split('_')
@@ -66,23 +65,21 @@ def optimize_structures():
                   f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
-        # optimize structure
-        PRO(f"{data_dir}/optimization", pdb_file_with_hydrogens, number_of_cpu).optimize()
+        # optimise structure
+        PRO(f"{data_dir}/optimisation", pdb_file_with_hydrogens, number_of_cpu).optimise()
 
         # create mmcif
-        optimized_PDB_file = f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb'
-        optimized_CIF_dir = f'{data_dir}/optimization/optimized_CIF'
-        os.mkdir(optimized_CIF_dir)
-        optimized_CIF_file = f'{optimized_CIF_dir}/{code}_added_H_optimized.cif'
+        optimised_PDB_file = f'{data_dir}/optimisation/optimised_PDB/{code}_added_H_optimised.pdb'
+        optimised_CIF_dir = f'{data_dir}/optimisation/optimised_CIF'
+        optimised_CIF_file = f'{optimised_CIF_dir}/{code}_added_H_optimised.cif'
         original_CIF_file = f'{data_dir}/{code}.cif'
-        create_mmcif(original_CIF_file, optimized_PDB_file, optimized_CIF_file, code)
+        os.mkdir(optimised_CIF_dir)
+        create_mmcif(original_CIF_file, optimised_PDB_file, optimised_CIF_file, code)
         running.remove(ID)
-        with open(f"{data_dir}/calculation_time.txt", "w") as ct:
-            ct.write(str(time()-s))
 
 
 def job_status(ID: str):
-    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimization/optimized_PDB/{ID.split("_")[0]}_added_H_optimized.pdb'):
+    if os.path.isfile(f'{root_dir}/calculated_structures/{ID}/optimisation/optimised_PDB/{ID.split("_")[0]}_added_H_optimised.pdb'):
         return "finished"
     elif os.path.isdir(f'{root_dir}/calculated_structures/{ID}'):
         if ID in queue:
@@ -114,7 +111,7 @@ def main_site():
             return redirect(url_for('results', ID=ID))
 
         elif status in ["queued", "running"]:
-            flash(Markup(f'Optimization of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
+            flash(Markup(f'Optimisation of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
                          f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
             return render_template('index.html', running=len(running), queued=len(queue))
@@ -136,13 +133,13 @@ def main_site():
                 pdb.write(response.text)
 
             # create and submit job
-            global optimizers
-            optimizers = [optimizer for optimizer in optimizers if optimizer.is_alive()]
+            global optimisers
+            optimisers = [optimiser for optimiser in optimisers if optimiser.is_alive()]
             queue.append(ID)
-            if len(optimizers) < number_of_processes:
-                optimizer = Process(target=optimize_structures)
-                optimizer.start()
-                optimizers.append(optimizer)
+            if len(optimisers) < number_of_processes:
+                optimiser = Process(target=optimise_structures)
+                optimiser.start()
+                optimisers.append(optimiser)
             return redirect(url_for('results', ID=ID))
 
     return render_template('index.html', running=len(running), queued=len(queue))
@@ -167,16 +164,16 @@ def results():
         return redirect(url_for('main_site'))
 
     if status == "queued":
-        status = f"Optimization is queued."
+        status = f"Optimisation is queued."
         return render_template('queued.html',
                                code=code,
                                ph=ph)
 
     elif status == "running":
-        n_optimized_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimization/sub_*/xtbopt.pdb'))
+        n_optimised_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimisation/sub_*/xtbopt.pdb'))
         total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][22:26])
-        percent_value = round(n_optimized_residues/(total_n_residues*0.01))
-        percent_text = f"{n_optimized_residues}/{total_n_residues}"
+        percent_value = round(n_optimised_residues/(total_n_residues*0.01))
+        percent_text = f"{n_optimised_residues}/{total_n_residues}"
         return render_template('running.html',
                                code=code,
                                ph=ph,
@@ -195,28 +192,28 @@ def download_files():
     code, _ = ID.split("_")
     data_dir = f'{root_dir}/calculated_structures/{ID}'
     with zipfile.ZipFile(f'{data_dir}/{ID}.zip', 'w') as zip:
-        zip.write(f'{data_dir}/optimization/optimized_PDB/{code}_added_H_optimized.pdb',f'{code}_optimized.pdb')
-        zip.write(f'{data_dir}/optimization/optimized_CIF/{code}_added_H_optimized.cif', f'{code}_optimized.cif')
+        zip.write(f'{data_dir}/optimisation/optimised_PDB/{code}_added_H_optimised.pdb',f'{code}_optimised.pdb')
+        zip.write(f'{data_dir}/optimisation/optimised_CIF/{code}_added_H_optimised.cif', f'{code}_optimised.cif')
         zip.write(f'{data_dir}/{code}.pdb', f'{code}_original.pdb')
         zip.write(f'{data_dir}/{code}.cif', f'{code}_original.cif')
     return send_from_directory(data_dir, f'{ID}.zip', as_attachment=True)
 
 
-@application.route('/optimized_structure/<ID>')
-def get_optimized_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/optimized_CIF/{ID.split("_")[0]}_added_H_optimized.cif'
+@application.route('/optimised_structure/<ID>')
+def get_optimised_structure(ID: str):
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimisation/optimised_CIF/{ID.split("_")[0]}_added_H_optimised.cif'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/original_structure/<ID>')
 def get_original_structure(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/inputed_PDB/{ID.split("_")[0]}_added_H.pdb'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimisation/inputed_PDB/{ID.split("_")[0]}_added_H.pdb'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
 @application.route('/residues_logs/<ID>')
 def get_residues_logs(ID: str):
-    filepath = f'{root_dir}/calculated_structures/{ID}/optimization/residues.logs'
+    filepath = f'{root_dir}/calculated_structures/{ID}/optimisation/residues.logs'
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 

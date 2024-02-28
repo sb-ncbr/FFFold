@@ -3,11 +3,11 @@
 let context = window.ContextModel;
 
 async function init(
-  optimizedStructureUrl,
+  optimisedStructureUrl,
   originalStructureUrl,
   residueLogsUrl
 ) {
-  await context.init(optimizedStructureUrl, originalStructureUrl, residueLogsUrl);
+  await context.init(optimisedStructureUrl, originalStructureUrl, residueLogsUrl);
 
   mountViewControls();
   mountColorControls();
@@ -15,20 +15,20 @@ async function init(
 
   const bas = document.getElementById("view_bas");
   const structure = document.getElementById("colors_structure");
-  const nonOptimized = document.getElementById("non_optimized");
+  const nonOptimised = document.getElementById("non_optimised");
   const view = document.getElementById("view_fieldset");
-  if (!bas || !structure || !nonOptimized || !view) {
+  if (!bas || !structure || !nonOptimised || !view) {
     console.error("Controls not found");
     return;
   }
   bas.setAttribute("checked", "true");
   structure.setAttribute("checked", "true");
-  nonOptimized.setAttribute("checked", "true");
+  nonOptimised.setAttribute("checked", "true");
   view.addEventListener("change", (e) => {
     if (!bas.checked) {
-      nonOptimized.setAttribute("disabled", "true");
+      nonOptimised.setAttribute("disabled", "true");
     } else {
-      nonOptimized.removeAttribute("disabled");
+      nonOptimised.removeAttribute("disabled");
     }
   });
 }
@@ -37,8 +37,8 @@ function mountViewControls() {
   const cartoon = document.getElementById("view_cartoon");
   const surface = document.getElementById("view_surface");
   const bas = document.getElementById("view_bas");
-  const nonOptimized = document.getElementById("non_optimized");
-  if (!cartoon || !surface || !bas || !nonOptimized) {
+  const nonOptimised = document.getElementById("non_optimised");
+  if (!cartoon || !surface || !bas || !nonOptimised) {
     console.error("View controls not found");
     return;
   }
@@ -46,12 +46,12 @@ function mountViewControls() {
   cartoon.onclick = async () => await context.changeView("cartoon");
   surface.onclick = async () => await context.changeView("gaussian-surface");
   bas.onclick = async () => await context.changeView("ball-and-stick");
-  nonOptimized.onclick = async () => await context.toggleVisibility();
+  nonOptimised.onclick = async () => await context.toggleVisibility();
 
   cartoon.removeAttribute("disabled");
   surface.removeAttribute("disabled");
   bas.removeAttribute("disabled");
-  nonOptimized.removeAttribute("disabled");
+  nonOptimised.removeAttribute("disabled");
 }
 
 function mountColorControls() {

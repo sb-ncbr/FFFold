@@ -1,6 +1,6 @@
 {% extends 'base/base.html' %}
 
-{% block title %} FFFold – Optimization results {% endblock title %}
+{% block title %} FFFold – Optimisation results {% endblock title %}
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='molstar.css') }}" />
@@ -12,7 +12,7 @@
   <div class="row">
     <div class="col">
       <h1 style="margin-bottom:25px">
-       <a href="./"><strong><span style="color: #0000CC">FF</span><span style="color: #1E90FF">Fold – Optimization
+       <a href="./"><strong><span style="color: #0000CC">FF</span><span style="color: #1E90FF">Fold – Optimisation
                         results</span></strong></a>
 
 
@@ -48,9 +48,9 @@
                         <input class="form-check-input" type="radio" name="view" id="view_bas" value="Ball & Stick" checked disabled>
                         <label class="form-check-label" for="view_bas">Ball & Stick</label>
                     </div>
-                    <div class="form-check form-check-inline col" title="Add non-optimized structure">
-                      <input class="form-check-input" type="checkbox" name="view" id="non_optimized" value="Add non-optimized structure" checked disabled>
-                      <label class="form-check-label" for="non_optimized">Add non-optimized structure</label>
+                    <div class="form-check form-check-inline col" title="Add non-optimised structure">
+                      <input class="form-check-input" type="checkbox" name="view" id="non_optimised" value="Add non-optimised structure" checked disabled>
+                      <label class="form-check-label" for="non_optimised">Add non-optimised structure</label>
                   </div>
                 </div>
             </fieldset>
@@ -81,7 +81,7 @@
   </div>
   <div class="row">
     <div class="col-7">
-      <a href="{{ url_for('download_files', ID=ID) }}" class="btn btn-primary" id="download">Download optimized structure</a>
+      <a href="{{ url_for('download_files', ID=ID) }}" class="btn btn-primary" id="download">Download optimised structure</a>
     </div>
     <div class="col text-right">
       <a href="{{ url_for('main_site') }}" class="btn btn-primary">Back to main page</a>
@@ -94,7 +94,7 @@
 <script src="{{ url_for('static', filename='molstar.js') }}"></script>
 <script src="{{ url_for('static', filename='main.js') }}"></script>
 <script>
-  const structure_url = '{{ url_for("get_optimized_structure", ID=ID) }}';
+  const structure_url = '{{ url_for("get_optimised_structure", ID=ID) }}';
   const original_structure_url =
     '{{ url_for("get_original_structure", ID=ID) }}';
   const residues_logs_url = '{{ url_for("get_residues_logs", ID=ID) }}';
