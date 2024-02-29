@@ -8,7 +8,7 @@ from multiprocessing import Process, Manager
 from random import random
 from glob import glob
 from time import time
-from ppropt.ppropt import PRO
+from ppropt import PRO
 
 
 application = Flask(__name__)
