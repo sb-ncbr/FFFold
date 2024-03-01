@@ -3,7 +3,7 @@ import os
 import requests
 import zipfile
 from datetime import datetime
-from flask import render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
+from flask import jsonify, render_template, flash, request, send_from_directory, redirect, url_for, Response, Flask, Markup
 from multiprocessing import Process, Manager
 from random import random
 from glob import glob
@@ -175,6 +175,7 @@ def results():
         percent_value = round(n_optimised_residues/(total_n_residues*0.01))
         percent_text = f"{n_optimised_residues}/{total_n_residues}"
         return render_template('running.html',
+                               ID=ID,
                                code=code,
                                ph=ph,
                                percent_value = percent_value,
@@ -185,6 +186,45 @@ def results():
                            code=code,
                            ph=ph)
 
+
+@application.route('/api/running_progress', methods=['GET'])
+def running_progress():
+    ID = request.args.get('ID')
+
+    try:
+        code, _ = ID.split('_')
+    except:
+        return Response('The ID was entered in the wrong format. '
+                     'The ID should be of the form <strong>&ltUniProt code&gt_&ltph&gt.',
+                     status=404,
+                     mimetype='text/plain')
+    
+    status = job_status(ID)
+    response = { 'status': status }
+    
+    if status == 'unsubmitted':
+        return jsonify(response)
+    if status == 'queued':
+        return jsonify(response)
+
+    if status == 'finished':
+        response.update({
+            'url': url_for('results', ID=ID)
+        })
+        return jsonify(response)
+        
+    n_optimised_residues = len(glob(f'{root_dir}/calculated_structures/{ID}/optimisation/sub_*/xtbopt.pdb'))
+    total_n_residues = int(open(f'{root_dir}/calculated_structures/{ID}/{code}.pdb', "r").readlines()[-4][22:26])
+    percent_value = f"{round(n_optimised_residues/(total_n_residues*0.01))}"
+    percent_text = f"{n_optimised_residues}/{total_n_residues}"
+        
+    response.update({
+        'percent_value': percent_value,
+        'percent_text': percent_text
+    })
+    
+    return jsonify(response)
+    
 
 @application.route('/download_files')
 def download_files():

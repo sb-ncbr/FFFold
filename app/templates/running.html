@@ -58,12 +58,8 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/progressbar.js') }}"></script>
 <script type="text/javascript">
-  function reload() {
-    document.location.reload();
-  }
-  setInterval(reload, 1000);
 
-  var bar = new ProgressBar.Line('#bar-container', {
+  let bar = new ProgressBar.Line('#bar-container', {
     strokeWidth: 1,
     color: '#1E90FF',
     svgStyle: {
@@ -88,8 +84,21 @@
   }
   });
 
-  bar.set('{{percent_value}}' / 100)
-  // bar.setText('{{percent_text}}')
+  async function reload() {
+    const response = await fetch("{{ url_for('running_progress', ID=ID) }}")
+    const progress = await response.json()
+
+    if (progress.status === 'finished') {
+      window.location.href = progress.url
+    }
+    if (progress.status === 'running') {
+      bar.set(+progress.percent_value / 100)
+      bar.setText(progress.percent_text)
+    }
+  }
+
+  setInterval(reload, 1000);
+  
 </script>
 </div>
 {% endblock scripts %}
