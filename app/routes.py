@@ -66,7 +66,7 @@ def optimise_structures():
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
         # optimise structure
-        PRO(f"{data_dir}/optimisation", pdb_file_with_hydrogens, number_of_cpu).optimise()
+        PRO(f"{data_dir}/optimisation", pdb_file_with_hydrogens, number_of_cpu, True).optimise()
 
         # create mmcif
         optimised_PDB_file = f'{data_dir}/optimisation/optimised_PDB/{code}_added_H_optimised.pdb'
