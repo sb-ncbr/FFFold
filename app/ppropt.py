@@ -241,8 +241,9 @@ class PRO:
                       'TYR': 4.5148,
                       'VAL': 2.9515}
 
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+10, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
                                  for residue in self.residues]
+
 
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
@@ -257,13 +258,17 @@ class PRO:
             density_3c = num_of_atoms_3c/volume_3c
             self.density_of_atoms_around_residues.append(density_c + density_2c/10 + density_3c/20)
 
+
+        self.nnearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+6, level="R"))
+                                 for residue in self.residues]
+
         unsorted_residues = [res for res in self.residues]
         sorted_residues = []
         already_sorted = [False for _ in range(len(self.residues))]
         while len(unsorted_residues):
             round_residues = []
             for res in unsorted_residues:
-                for near_residue in self.nearest_residues[res.id[1]-1]:
+                for near_residue in self.nnearest_residues[res.id[1]-1]:
                     if res == near_residue:
                         continue
                     if already_sorted[near_residue.id[1]-1]:

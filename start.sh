@@ -6,7 +6,7 @@ sudo apt -y install python3-pip python3-venv apache2 libapache2-mod-wsgi-py3 git
 
 # clone repo
 cd /opt
-sudo git clone --recurse-submodules --depth 1 https://github.com/sb-ncbr/FFFold
+sudo git clone https://github.com/sb-ncbr/FFFold
 
 # install python deps
 sudo python3 -m venv venv
