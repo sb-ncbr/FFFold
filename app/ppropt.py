@@ -57,140 +57,139 @@ def get_distances(residue1, residue2):
      return mins, min(mins)
 
 
-def optimise_substructure(coordinates, is_optimised, sorted_residues, PRO, currently_optimised, currently_tested):
-    while not all(is_optimised):
-        for candidate in sorted_residues:
-
-
-
-            if currently_tested[candidate.id[1]-1] == True:
-                continue
-            else:
-                currently_tested[candidate.id[1]-1] = True
-
-            if is_optimised[candidate.id[1]-1] == False and currently_optimised[candidate.id[1]-1] == False:
-                for nr in PRO.nnearest_residues[candidate.id[1] - 1]:
-                    if is_optimised[nr.id[1]-1]:
-                        continue
-                    if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[candidate.id[1] - 1]:
-                        currently_tested[candidate.id[1]-1] = False
-                        break
-                else:
-                    optimised_residue = candidate
-                    print(optimised_residue)
-                    currently_optimised[optimised_residue.id[1]-1] = True
-                    substructure_residues = []  # all residues in substructure
-                    optimised_residue_index = optimised_residue.id[1]
-                    constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
-                    counter_atoms = 1  # start from 1 because of xtb countering
-                    near_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
-
-                    for atom in optimised_residue:
-                        atom.coord = coordinates[atom.serial_number-1]
-                    for residue in near_residues:  # select substructure residues
-                        for atom in residue.get_atoms():
-                            atom.coord = coordinates[atom.serial_number-1]
-                        minimum_distances, absolute_min_distance = get_distances([atom.coord for atom in optimised_residue.get_atoms()],
-                                                                                 [atom.coord for atom in residue.get_atoms()])
-                        if absolute_min_distance < 6:
-                            constrained_atoms = []
-                            for atom_distance, atom in zip(minimum_distances, residue.get_atoms()):
-                                if atom.name == "CA" or atom_distance > 4:
-                                    constrained_atoms.append(atom)
-                                    constrained_atom_indices.append(str(counter_atoms))
-                                counter_atoms += 1
-                            substructure_residues.append(Residue(index=residue.id[1],
-                                                                 constrained_atoms=constrained_atoms))
-                    substructure_data_dir = f"{PRO.data_dir}/sub_{optimised_residue_index}"
-                    system(f"mkdir {substructure_data_dir}")
-                    selector = SelectIndexedResidues()
-                    selector.indices = set([residue.index for residue in substructure_residues])
-                    PRO.io.save(f"{substructure_data_dir}/substructure.pdb", selector)
-
-                    # protonation of broken peptide bonds
-
-                    num_of_atoms = counter_atoms - 1
-                    system(f"cd {substructure_data_dir} ;"
-                           f"obabel -h -iPDB -oPDB substructure.pdb > reprotonated_substructure.pdb 2>/dev/null")
-                    with open(f"{substructure_data_dir}/reprotonated_substructure.pdb") as reprotonated_substructure_file:
-                        atom_lines = [line for line in reprotonated_substructure_file.readlines() if line[:4] == "ATOM"]
-                        original_atoms = atom_lines[:num_of_atoms]
-                        added_atoms = atom_lines[num_of_atoms:]
-                    with open(f"{substructure_data_dir}/repaired_substructure.pdb", "w") as repaired_substructure_file:
-                        repaired_substructure_file.write("".join(original_atoms))
-                        added_hydrogen_indices = []
-                        hydrogens_counter = num_of_atoms
-                        for line in added_atoms:
-                            res_i = int(line[22:26])
-                            if any([dist([float(line[30:38]), float(line[38:46]), float(line[46:54])], PRO.structure[res_i]["C"].coord) < 1.1,
-                                    dist([float(line[30:38]), float(line[38:46]), float(line[46:54])], PRO.structure[res_i]["N"].coord) < 1.1]):
-                                repaired_substructure_file.write(line)
-                                hydrogens_counter += 1
-                                added_hydrogen_indices.append(hydrogens_counter)
-                    system(f"cd {substructure_data_dir} ; mv repaired_substructure.pdb substructure.pdb")
-
-                    # optimise substructure by xtb
-                    engine = "rf"
-                    xtb_settings_template = f"""$constrain
-                    atoms: xxx
-                    force constant=1.0
-                    $end
-                    $opt
-                    engine={engine}
-                    $end
-                    """
-                    substructure_settings = xtb_settings_template.replace("xxx", ", ".join(
-                        constrained_atom_indices) + ", " + ", ".join([str(x) for x in added_hydrogen_indices]))
-                    with open(f"{substructure_data_dir}/xtb_settings.inp", "w") as xtb_settings_file:
-                        xtb_settings_file.write(substructure_settings)
-                    run_xtb = (f"cd {substructure_data_dir} ;"
-                               f"ulimit -s unlimited ;"
-                               f"export OMP_NUM_THREADS=1,1 ;"
-                               f"export OMP_MAX_ACTIVE_LEVELS=1 ;"
-                               f"export MKL_NUM_THREADS=1 ;"
-                               f"xtb substructure.pdb --gfnff --input xtb_settings.inp --opt tight --alpb water --verbose > xtb_output.txt 2>&1 ; rm gfnff_*")
-                    system(run_xtb)
-                    if not path.isfile(f"{substructure_data_dir}/xtbopt.pdb"):  # second try by L-ANCOPT
-                        engine = "lbfgs"
-                        substructure_settings = open(f"{substructure_data_dir}/xtb_settings.inp", "r").read().replace("rf", engine)
-                        with open(f"{substructure_data_dir}/xtb_settings.inp", "w") as xtb_settings_file:
-                            xtb_settings_file.write(substructure_settings)
-                        system(run_xtb)
-
-                    if path.isfile(f"{substructure_data_dir}/xtbopt.pdb"):
-                        category = "Optimised residue"
-                        optimised_substructure = PDBParser(QUIET=True).get_structure("substructure", f"{substructure_data_dir}/xtbopt.pdb")[0]
-                        optimised_substructure_residues = list(list(optimised_substructure.get_chains())[0].get_residues())
-                        or_constrained_atoms = []
-                        op_constrained_atoms = []
-                        for or_r, op_r in zip(substructure_residues, optimised_substructure_residues):
-                            for constrained_atom in or_r.constrained_atoms:
-                                or_constrained_atoms.append(constrained_atom)
-                                op_constrained_atoms.append(op_r[constrained_atom.name])
-                        sup = Superimposer()
-                        sup.set_atoms(or_constrained_atoms, op_constrained_atoms)
-                        sup.apply(optimised_substructure.get_atoms())
-                        for op_res, or_res in zip(optimised_substructure_residues, substructure_residues):
-                            for atom,c in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
-                                if atom not in constrained_atoms:
-                                    coordinates[atom.serial_number-1] = c
-                    else:
-                        category = "Not optimised residue"
-                        engine = "none"
-                    log = {"residue index": optimised_residue_index,
-                           "residue name": SeqUtils.IUPACData.protein_letters_3to1[optimised_residue.resname.capitalize()],
-                           "category": category,
-                           "optimisation engine": engine}
-                    with open(f"{substructure_data_dir}/residue.log", "w") as residue_log:
-                        residue_log.write(json.dumps(log, indent=2))
-
-                    is_optimised[optimised_residue_index-1] = True
-                    currently_optimised[optimised_residue.id[1]-1] = False
-                    currently_tested[candidate.id[1] - 1] = False
-                    break
+def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, PRO):
+    while not all(is_already_optimised):
+        try:
+            optimised_residue = queue.pop(0)
+            print(optimised_residue)
+        except IndexError:
+            sleep(0.01)
         else:
-            sleep(0.1
-                  )
+            substructure_residues = []  # all residues in substructure
+            optimised_residue_index = optimised_residue.id[1]
+            constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
+            counter_atoms = 1  # start from 1 because of xtb countering
+            near_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
+
+            for atom in optimised_residue:
+                atom.coord = coordinates[atom.serial_number-1]
+            for residue in near_residues:  # select substructure residues
+                for atom in residue.get_atoms():
+                    atom.coord = coordinates[atom.serial_number-1]
+                minimum_distances, absolute_min_distance = get_distances([atom.coord for atom in optimised_residue.get_atoms()],
+                                                                         [atom.coord for atom in residue.get_atoms()])
+                if absolute_min_distance < 6:
+                    constrained_atoms = []
+                    for atom_distance, atom in zip(minimum_distances, residue.get_atoms()):
+                        if atom.name == "CA" or atom_distance > 4:
+                            constrained_atoms.append(atom)
+                            constrained_atom_indices.append(str(counter_atoms))
+                        counter_atoms += 1
+                    substructure_residues.append(Residue(index=residue.id[1],
+                                                         constrained_atoms=constrained_atoms))
+            substructure_data_dir = f"{PRO.data_dir}/sub_{optimised_residue_index}"
+            system(f"mkdir {substructure_data_dir}")
+            selector = SelectIndexedResidues()
+            selector.indices = set([residue.index for residue in substructure_residues])
+            PRO.io.save(f"{substructure_data_dir}/substructure.pdb", selector)
+
+            # protonation of broken peptide bonds
+
+            num_of_atoms = counter_atoms - 1
+            system(f"cd {substructure_data_dir} ;"
+                   f"obabel -h -iPDB -oPDB substructure.pdb > reprotonated_substructure.pdb 2>/dev/null")
+            with open(f"{substructure_data_dir}/reprotonated_substructure.pdb") as reprotonated_substructure_file:
+                atom_lines = [line for line in reprotonated_substructure_file.readlines() if line[:4] == "ATOM"]
+                original_atoms = atom_lines[:num_of_atoms]
+                added_atoms = atom_lines[num_of_atoms:]
+            with open(f"{substructure_data_dir}/repaired_substructure.pdb", "w") as repaired_substructure_file:
+                repaired_substructure_file.write("".join(original_atoms))
+                added_hydrogen_indices = []
+                hydrogens_counter = num_of_atoms
+                for line in added_atoms:
+                    res_i = int(line[22:26])
+                    if any([dist([float(line[30:38]), float(line[38:46]), float(line[46:54])], PRO.structure[res_i]["C"].coord) < 1.1,
+                            dist([float(line[30:38]), float(line[38:46]), float(line[46:54])], PRO.structure[res_i]["N"].coord) < 1.1]):
+                        repaired_substructure_file.write(line)
+                        hydrogens_counter += 1
+                        added_hydrogen_indices.append(hydrogens_counter)
+            system(f"cd {substructure_data_dir} ; mv repaired_substructure.pdb substructure.pdb")
+
+            # optimise substructure by xtb
+            engine = "rf"
+            xtb_settings_template = f"""$constrain
+            atoms: xxx
+            force constant=1.0
+            $end
+            $opt
+            engine={engine}
+            $end
+            """
+            substructure_settings = xtb_settings_template.replace("xxx", ", ".join(
+                constrained_atom_indices) + ", " + ", ".join([str(x) for x in added_hydrogen_indices]))
+            with open(f"{substructure_data_dir}/xtb_settings.inp", "w") as xtb_settings_file:
+                xtb_settings_file.write(substructure_settings)
+            run_xtb = (f"cd {substructure_data_dir} ;"
+                       f"ulimit -s unlimited ;"
+                       f"export OMP_NUM_THREADS=1,1 ;"
+                       f"export OMP_MAX_ACTIVE_LEVELS=1 ;"
+                       f"export MKL_NUM_THREADS=1 ;"
+                       f"xtb substructure.pdb --gfnff --input xtb_settings.inp --opt tight --alpb water --verbose > xtb_output.txt 2>&1 ; rm gfnff_*")
+            system(run_xtb)
+            if not path.isfile(f"{substructure_data_dir}/xtbopt.pdb"):  # second try by L-ANCOPT
+                engine = "lbfgs"
+                substructure_settings = open(f"{substructure_data_dir}/xtb_settings.inp", "r").read().replace("rf", engine)
+                with open(f"{substructure_data_dir}/xtb_settings.inp", "w") as xtb_settings_file:
+                    xtb_settings_file.write(substructure_settings)
+                system(run_xtb)
+
+            if path.isfile(f"{substructure_data_dir}/xtbopt.pdb"):
+                category = "Optimised residue"
+                optimised_substructure = PDBParser(QUIET=True).get_structure("substructure", f"{substructure_data_dir}/xtbopt.pdb")[0]
+                optimised_substructure_residues = list(list(optimised_substructure.get_chains())[0].get_residues())
+                or_constrained_atoms = []
+                op_constrained_atoms = []
+                for or_r, op_r in zip(substructure_residues, optimised_substructure_residues):
+                    for constrained_atom in or_r.constrained_atoms:
+                        or_constrained_atoms.append(constrained_atom)
+                        op_constrained_atoms.append(op_r[constrained_atom.name])
+                sup = Superimposer()
+                sup.set_atoms(or_constrained_atoms, op_constrained_atoms)
+                sup.apply(optimised_substructure.get_atoms())
+                for op_res, or_res in zip(optimised_substructure_residues, substructure_residues):
+                    for atom,c in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
+                        if atom not in constrained_atoms:
+                            coordinates[atom.serial_number-1] = c
+            else:
+                category = "Not optimised residue"
+                engine = "none"
+            log = {"residue index": optimised_residue_index,
+                   "residue name": SeqUtils.IUPACData.protein_letters_3to1[optimised_residue.resname.capitalize()],
+                   "category": category,
+                   "optimisation engine": engine}
+            with open(f"{substructure_data_dir}/residue.log", "w") as residue_log:
+                residue_log.write(json.dumps(log, indent=2))
+
+            is_already_optimised[optimised_residue_index-1] = True
+            is_currently_optimised_or_queued[optimised_residue_index-1] = False
+
+
+            for level in PRO.sorted_residues:
+                for res in level:
+                    res_i = res.id[1] - 1
+                    if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
+                        continue
+                    for nr in PRO.nnearest_residues[res_i]:
+                        if is_already_optimised[nr.id[1] - 1]:
+                            continue
+                        if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[res_i]:
+                            break
+                    else:
+                        if is_currently_optimised_or_queued[res_i] == False: # lock?
+                            is_currently_optimised_or_queued[res_i] = True
+                            queue.append(res)
+
+
 
 
 
@@ -217,16 +216,18 @@ class PRO:
     def optimise(self):
         self._load_molecule()
         print("Optimisation... ", end="")
+
         manager = Manager()
         coordinates = manager.list([atom.coord for atom in self.structure.get_atoms()])
-        is_optimised = manager.list([False for _ in self.residues])
-        sorted_residues = manager.list(self.sorted_residues)
-        currently_optimised = manager.list([False for _ in self.residues])
-        currently_tested = manager.list([False for _ in self.residues])
-
+        is_already_optimised = manager.list([False for _ in self.residues])
+        is_currently_optimised_or_queued = manager.list([False for _ in self.residues])
+        queue = manager.list()
+        for seed in self.sorted_residues[0]:
+            queue.append(seed)
+            is_currently_optimised_or_queued[seed.id[1]-1] = True
         processes = []
         for _ in range(self.cpu):
-            p = Process(target=optimise_substructure, args=(coordinates, is_optimised, sorted_residues, self, currently_optimised, currently_tested))
+            p = Process(target=optimise_substructure, args=(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, self))
             p.start()
             processes.append(p)
         for p in processes:
@@ -315,7 +316,7 @@ class PRO:
 
 
         self.nnearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
-                                 for residue in self.residues]
+                                  for residue in self.residues]
 
         unsorted_residues = [res for res in self.residues]
         sorted_residues = []
@@ -336,8 +337,9 @@ class PRO:
                 unsorted_residues.remove(res)
                 already_sorted[res.id[1]-1] = True
             sorted_residues.append(round_residues)
-        self.sorted_residues = [residue for residues in sorted_residues for residue in residues]
-        print("ok")
+        self.sorted_residues = sorted_residues
+
+
 
 
 if __name__ == '__main__':
