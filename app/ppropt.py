@@ -4,7 +4,8 @@ from Bio import SeqUtils
 from Bio.PDB import Select, PDBIO, PDBParser, Superimposer, NeighborSearch
 from dataclasses import dataclass
 from os import system, path
-from multiprocessing import Process, Manager, Lock, Array
+from multiprocessing import Process, Lock, Array, Queue
+from queue import Empty as QueueEmpty
 from math import dist
 from glob import glob
 from time import sleep
@@ -61,11 +62,11 @@ def get_distances(residue1, residue2):
 def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, PRO):
     while not all(is_already_optimised):
         try:
-            optimised_residue = queue.pop(0)
-            print(optimised_residue)
-        except IndexError:
+            optimised_residue = queue.get(block=False)
+        except QueueEmpty:
             sleep(0.01)
         else:
+            print(optimised_residue)
             substructure_residues = []  # all residues in substructure
             optimised_residue_index = optimised_residue.id[1]
             constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
@@ -183,7 +184,6 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             is_already_optimised[optimised_residue_index-1] = True
             is_currently_optimised_or_queued[optimised_residue_index-1] = False
 
-
             for level in PRO.sorted_residues:
                 for res in level:
                     res_i = res.id[1] - 1
@@ -195,10 +195,13 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                         if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[res_i]:
                             break
                     else:
+                        from time import time
+                        t = time()
                         with lock:
                             if is_currently_optimised_or_queued[res_i] == False:
                                 is_currently_optimised_or_queued[res_i] = True
-                                queue.append(res)
+                                queue.put(res)
+                        print(time() - t)
 
 
 
@@ -228,8 +231,7 @@ class PRO:
         self._load_molecule()
         print("Optimisation... ", end="")
 
-        manager = Manager()
-        queue = manager.list()
+        queue = Queue()
 
 
 
@@ -242,7 +244,7 @@ class PRO:
         lock = Lock()
 
         for seed in self.sorted_residues[0]:
-            queue.append(seed)
+            queue.put(seed)
             is_currently_optimised_or_queued[seed.id[1]-1] = True
         processes = []
         for _ in range(self.cpu):
@@ -359,6 +361,10 @@ class PRO:
                 already_sorted[res.id[1]-1] = True
             sorted_residues.append(round_residues)
         self.sorted_residues = sorted_residues
+        print("ok")
+        # from pprint import pprint
+        # pprint(self.sorted_residues)
+        # exit()
 
 
 
