@@ -4,7 +4,7 @@ from Bio import SeqUtils
 from Bio.PDB import Select, PDBIO, PDBParser, Superimposer, NeighborSearch
 from dataclasses import dataclass
 from os import system, path
-from multiprocessing import Process, Manager, Lock
+from multiprocessing import Process, Manager, Lock, Array
 from math import dist
 from glob import glob
 from time import sleep
@@ -57,7 +57,7 @@ def get_distances(residue1, residue2):
      return mins, min(mins)
 
 
-def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, PRO):
+def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, PRO):
     while not all(is_already_optimised):
         try:
             optimised_residue = queue.pop(0)
@@ -185,9 +185,10 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                         if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[res_i]:
                             break
                     else:
-                        if is_currently_optimised_or_queued[res_i] == False: # lock?
-                            is_currently_optimised_or_queued[res_i] = True
-                            queue.append(res)
+                        with lock:
+                            if is_currently_optimised_or_queued[res_i] == False:
+                                is_currently_optimised_or_queued[res_i] = True
+                                queue.append(res)
 
 
 
@@ -218,16 +219,22 @@ class PRO:
         print("Optimisation... ", end="")
 
         manager = Manager()
-        coordinates = manager.list([atom.coord for atom in self.structure.get_atoms()])
-        is_already_optimised = manager.list([False for _ in self.residues])
-        is_currently_optimised_or_queued = manager.list([False for _ in self.residues])
         queue = manager.list()
+        coordinates = manager.list([atom.coord for atom in self.structure.get_atoms()])
+
+
+
+        is_already_optimised = Array("d", [0 for _ in self.residues], lock=False)
+        is_currently_optimised_or_queued = Array("d", [0 for _ in self.residues], lock=False)
+
+        lock = Lock()
+
         for seed in self.sorted_residues[0]:
             queue.append(seed)
             is_currently_optimised_or_queued[seed.id[1]-1] = True
         processes = []
         for _ in range(self.cpu):
-            p = Process(target=optimise_substructure, args=(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, self))
+            p = Process(target=optimise_substructure, args=(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, self))
             p.start()
             processes.append(p)
         for p in processes:
