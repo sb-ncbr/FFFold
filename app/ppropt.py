@@ -64,9 +64,28 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
         try:
             optimised_residue = queue.get(block=False)
         except QueueEmpty:
-            sleep(0.01)
+            added = False
+            for level in PRO.sorted_residues:
+                for res in level:
+                    res_i = res.id[1] - 1
+                    if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
+                        continue
+                    for nr in PRO.nnearest_residues[res_i]:
+                        if is_already_optimised[nr.id[1] - 1]:
+                            continue
+                        if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[
+                            res_i]:
+                            break
+                    else:
+                        with lock:
+                            if is_currently_optimised_or_queued[res_i] == False:
+                                added = True
+                                is_currently_optimised_or_queued[res_i] = True
+                                queue.put(res)
+            if not added:
+                sleep(0.1)
+
         else:
-            print(optimised_residue)
             substructure_residues = []  # all residues in substructure
             optimised_residue_index = optimised_residue.id[1]
             constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
@@ -184,24 +203,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             is_already_optimised[optimised_residue_index-1] = True
             is_currently_optimised_or_queued[optimised_residue_index-1] = False
 
-            for level in PRO.sorted_residues:
-                for res in level:
-                    res_i = res.id[1] - 1
-                    if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
-                        continue
-                    for nr in PRO.nnearest_residues[res_i]:
-                        if is_already_optimised[nr.id[1] - 1]:
-                            continue
-                        if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[res_i]:
-                            break
-                    else:
-                        from time import time
-                        t = time()
-                        with lock:
-                            if is_currently_optimised_or_queued[res_i] == False:
-                                is_currently_optimised_or_queued[res_i] = True
-                                queue.put(res)
-                        print(time() - t)
+
 
 
 
