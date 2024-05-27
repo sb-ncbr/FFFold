@@ -8,6 +8,7 @@ from multiprocessing import Process, Manager, Lock, Array
 from math import dist
 from glob import glob
 from time import sleep
+import numpy as np
 
 
 def load_arguments():
@@ -72,10 +73,13 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             near_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
 
             for atom in optimised_residue:
-                atom.coord = coordinates[atom.serial_number-1]
+                # atom.coord = coordinates[atom.serial_number-1]
+                atom.coord = np.array(coordinates[(atom.serial_number - 1) * 3:(atom.serial_number - 1) * 3 + 3])
+
             for residue in near_residues:  # select substructure residues
                 for atom in residue.get_atoms():
-                    atom.coord = coordinates[atom.serial_number-1]
+                    # atom.coord = coordinates[atom.serial_number-1]
+                    atom.coord = np.array(coordinates[(atom.serial_number-1)*3:(atom.serial_number-1)*3+3])
                 minimum_distances, absolute_min_distance = get_distances([atom.coord for atom in optimised_residue.get_atoms()],
                                                                          [atom.coord for atom in residue.get_atoms()])
                 if absolute_min_distance < 6:
@@ -157,9 +161,15 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 sup.set_atoms(or_constrained_atoms, op_constrained_atoms)
                 sup.apply(optimised_substructure.get_atoms())
                 for op_res, or_res in zip(optimised_substructure_residues, substructure_residues):
-                    for atom,c in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
+                    # for atom,c in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
+                    #     if atom not in constrained_atoms:
+                    #         coordinates[atom.serial_number-1] = c
+                    for atom,coord in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
                         if atom not in constrained_atoms:
-                            coordinates[atom.serial_number-1] = c
+                            coordinates[(atom.serial_number-1)*3] = coord[0]
+                            coordinates[(atom.serial_number-1)*3+1] = coord[1]
+                            coordinates[(atom.serial_number-1)*3+2] = coord[2]
+
             else:
                 category = "Not optimised residue"
                 engine = "none"
@@ -220,8 +230,10 @@ class PRO:
 
         manager = Manager()
         queue = manager.list()
-        coordinates = manager.list([atom.coord for atom in self.structure.get_atoms()])
 
+
+
+        coordinates = Array("d", [coord for atom in self.structure.get_atoms() for coord in atom.coord], lock=False)
 
 
         is_already_optimised = Array("d", [0 for _ in self.residues], lock=False)
@@ -240,8 +252,10 @@ class PRO:
         for p in processes:
             p.join()
 
-        for c, a in zip(coordinates, self.structure.get_atoms()):
-            a.coord = c
+        # for c, a in zip(coordinates, self.structure.get_atoms()):
+        #     a.coord = c
+        for a in self.structure.get_atoms():
+            a.coord = np.array(coordinates[(a.serial_number-1)*3:(a.serial_number-1)*3+3])
         print("ok")
 
         print("Storage of the optimised structure... ", end="")
