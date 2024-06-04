@@ -27,10 +27,16 @@
                         rel="noreferrer">AlphaFold DB</a> database.
                     The structures are optimised by the physics-based generic force field <a
                         href="https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202004239" target="_blank"
-                        rel="noreferrer">GFN-FF</a> accelerated by a divide-and-conquer approach which results are comparable to the optimisation of whole protein structure with
-                    constrained α-carbons. Thus, <strong><span style="color: #0000CC">FF</span><span
-                            style="color: #1E90FF">Fold</span></strong> optimises in particular the bond lengths and angles and describes the interactions between nearby residues as can be seen in examples.
-                    Before computation of the charges, input protein structures are protonated by <a href="https://pubs.acs.org/doi/full/10.1021/ct100578z" target="_blank"
+                        rel="noreferrer">GFN-FF</a> which are approaching the accuracy of semiempirical QM methods. Optimisation is accelerated by <a
+                        href="https://github.com/sb-ncbr/ppropt" target="_blank"
+                        rel="noreferrer">PPROpt</a> approach which is an alternative to optimizing the structure with constrained α-carbons.
+
+
+                    The main purpose of <strong><span style="color: #0000CC">FF</span><span
+                        style="color: #1E90FF">Fold</span></strong> is to optimize bond lengths and angles and inter-residual interactions as can be seen in the examples.
+
+
+                    Before optimisation, input protein structures are protonated by <a href="https://pubs.acs.org/doi/full/10.1021/ct100578z" target="_blank"
                         rel="noreferrer">PROPKA3</a>. The details about the methodology and usage are
                     described in the <a href="https://github.com/sb-ncbr/FFFold/wiki" target="_blank"
                                         rel="noreferrer">manual</a>. This website is free and open to all users and there is
@@ -78,87 +84,82 @@
             <br>
             <h4>Examples</h4>
 
+<small>Examples of structure improvements are from the structure with Uniprot AC <a href="https://fffold.biodata.ceitec.cz/results?ID=A4QBG9_13.0" target="_blank"
+                        rel="noreferrer">A4QBG9</a>. The original structure from AlphaFold DB is shown in grey, and the structure optimised by <strong><span style="color:#0000CC">FF</span><span
+        style="color: #1E90FF">Fold</span></strong> is in colour.
+
+</small>
         </div>
 
     </div>
+    <br>
     <div class="row">
-        <div class="col-lg-4 pl-0">
+
+
+        <div class="col-md-3 pl-0">
+            <div class="col">
+                <strong>Bond length</strong>
+            </div>
+            <div class="col text-align mt-3">
+                <img src="/static/assets/bond_length.png" alt="TA"
+                    style="height: 240px">
+            </div>
+            <div class="col mt-3 text-justify">
+                <small>
+                    The bond length between CA and H atoms in MET1 is modified about 0.1 angstrom. On average, the bond lengths in MET1 are optimized by 0.05 angstrom.
+                </small>
+            </div>
+
+        </div>
+        <div class="col-md-3 pl-0">
             <div class="col">
                 <strong>Dihedral angles</strong>
             </div>
             <div class="col text-align mt-3">
-                <img src="/static/assets/TA.png" alt="TA"
-                    style="height: 200px">
+                <img src="/static/assets/dihedral.png" alt="HB"
+                    style="height: 240px">
             </div>
             <div class="col mt-3 text-justify">
                 <small>
-                    The AlphaFold 2 and the subsequent PROPKA prediction of hydrogens often created a bond with a unnatural
-                    angle (e.g., peptide bond with almost right angle). <strong><span style="color: #0000CC">FF</span><span
-                        style="color: #1E90FF">Fold</span></strong> optimises bond lengths and bond angles.
+                   Dihedral angles in THR126 between atoms OG1, CB, CG2 and hydrogens HG21, HG22, HG23 are optimised from energetically unfavourable eclipsed
+conformation.
                 </small>
             </div>
-            <div class="col text-center mt-3">
-                <form method=post enctype=multipart/form-data>
-                    <input type="hidden" name="ph" value='2' />
-                    <input type="hidden" name="code" value='B2UFK5' />
-                    <button type="submit" class="btn btn-primary" name="action"
-                        value="optimise structure">B2UFK5; residues 121, 122</button>
-                </form>
-            </div>
-        </div>
-        <div class="col-lg-4 pl-0">
-            <div class="col">
-                <strong>Hydrogen bonds</strong>
-            </div>
-            <div class="col text-align mt-3">
-                <img src="/static/assets/HB.png" alt="HB"
-                    style="height: 200px">
-            </div>
-            <div class="col mt-3 text-justify">
-                <small>
-                   Hydrogen bonds are important contributors to the secondary and partly also to the tertiary structure of the protein.
-                    During <strong><span style="color: #0000CC">FF</span><span
-                        style="color: #1E90FF">Fold</span></strong> optimisation, a large number of hydrogen bonds are formed/refined in the structure.
-                </small>
-            </div>
-            <div class="col text-center mt-3">
-                <form method=post enctype=multipart/form-data>
-                    <input type="hidden" name="ph" value='7.2' />
-                    <input type="hidden" name="code" value='L8BU87' />
-                    <button type="submit" class="btn btn-primary" name="action"
-                        value="optimise structure">L8BU87; residues 19, 35, 36</button>
-                </form>
-            </div>
+
         </div>
 
-        <div class="col-lg-4 pl-0">
+        <div class="col-md-3 pl-0">
+            <div class="col">
+                <strong>Hydrogen bond</strong>
+            </div>
+            <div class="col text-align mt-3">
+                <img src="/static/assets/hydrogen_bond.png" alt="PS"
+                    style="height: 240px">
+            </div>
+            <div class="col mt-3 text-justify">
+                <small>
+                    The hydrogen bond is created between atoms HH11 from ARG132 and OH from TYR258. Also, the cation-π interaction between ARG132 and TRP122 is strengthened.
+
+                </small>
+            </div>
+
+        </div>
+
+        <div class="col-md-3 pl-0">
             <div class="col">
                 <strong>π–π stacking</strong>
             </div>
             <div class="col text-align mt-3">
-                <img src="/static/assets/PS.png" alt="PS"
-                    style="height: 200px">
+                <img src="/static/assets/pi_stacking.png" alt="PS"
+                    style="height: 240px">
             </div>
             <div class="col mt-3 text-justify">
                 <small>
-                    The π-π interaction stabilizes the secondary and tertiary structure of the protein.
-                    Also these interactions can be described because force field GFN-FF retains an iterative Hückel quantum-mechanical scheme
-                    for aromatic atoms.
+                    T-shaped π-π stacking is formed between residues PHE90 and HIS461.
 
                 </small>
             </div>
-            <div class="col text-center mt-3">
-                <form method=post enctype=multipart/form-data>
-                    <input type="hidden" name="ph" value='13' />
-                    <input type="hidden" name="prediction_version" value='4' />
-                    <input type="hidden" name="code" value='A4QBG9' />
-                    <button type="submit" class="btn btn-primary" name="action"
-                        value="optimise structure">A4QBG9; residues 233, 234</button>
-                </form>
-            </div>
         </div>
-
-
 
 
     </div>
@@ -180,10 +181,4 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js"></script>
 <script src="{{ url_for('static', filename='bootstrap/bootstrap.bundle.min.js') }}"></script>
-<script type="text/javascript">
-function reload() {
-  document.location.reload();
-}
-setInterval(reload, 60000);
-</script>
 {% endblock scripts %}
