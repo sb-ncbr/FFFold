@@ -10,6 +10,7 @@ from math import dist
 from glob import glob
 from time import sleep
 import numpy as np
+from numba import jit
 
 
 def load_arguments():
@@ -49,56 +50,36 @@ class Residue:
     constrained_atoms: list
 
 
-def get_distances(residue1, residue2):
-     distances = [0 for x in range(len(residue1))]
-     mins = [0 for x in range(len(residue2))]
-     for i,a in enumerate(residue2):
-         for j,b in enumerate(residue1):
+@jit(cache=True, nopython=True, fastmath=True, boundscheck=False, nogil=True)
+def get_distances(optimised_residue, residue):
+     distances = np.empty(len(optimised_residue))
+     mins = np.empty(len(residue))
+     for i,a in enumerate(residue):
+         for j,b in enumerate(optimised_residue):
              distances[j] = ((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2)**(1/2)
-         mins[i] = min(distances)
-     return mins, min(mins)
+         mins[i] = distances.min()
+     return mins, mins.min()
 
 
 def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, PRO):
     while not all(is_already_optimised):
         try:
             optimised_residue = queue.get(block=False)
+            print(optimised_residue)
         except QueueEmpty:
-            added = False
-            for level in PRO.sorted_residues:
-                for res in level:
-                    res_i = res.id[1] - 1
-                    if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
-                        continue
-                    for nr in PRO.nnearest_residues[res_i]:
-                        if is_already_optimised[nr.id[1] - 1]:
-                            continue
-                        if PRO.density_of_atoms_around_residues[nr.id[1] - 1] > PRO.density_of_atoms_around_residues[
-                            res_i]:
-                            break
-                    else:
-                        with lock:
-                            if is_currently_optimised_or_queued[res_i] == False:
-                                added = True
-                                is_currently_optimised_or_queued[res_i] = True
-                                queue.put(res)
-            if not added:
-                sleep(0.1)
-
+            sleep(0.001)
         else:
             substructure_residues = []  # all residues in substructure
             optimised_residue_index = optimised_residue.id[1]
             constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
             counter_atoms = 1  # start from 1 because of xtb countering
-            near_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
+            nearest_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
 
             for atom in optimised_residue:
-                # atom.coord = coordinates[atom.serial_number-1]
                 atom.coord = np.array(coordinates[(atom.serial_number - 1) * 3:(atom.serial_number - 1) * 3 + 3])
 
-            for residue in near_residues:  # select substructure residues
+            for residue in nearest_residues:  # select substructure residues
                 for atom in residue.get_atoms():
-                    # atom.coord = coordinates[atom.serial_number-1]
                     atom.coord = np.array(coordinates[(atom.serial_number-1)*3:(atom.serial_number-1)*3+3])
                 minimum_distances, absolute_min_distance = get_distances([atom.coord for atom in optimised_residue.get_atoms()],
                                                                          [atom.coord for atom in residue.get_atoms()])
@@ -181,9 +162,6 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 sup.set_atoms(or_constrained_atoms, op_constrained_atoms)
                 sup.apply(optimised_substructure.get_atoms())
                 for op_res, or_res in zip(optimised_substructure_residues, substructure_residues):
-                    # for atom,c in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
-                    #     if atom not in constrained_atoms:
-                    #         coordinates[atom.serial_number-1] = c
                     for atom,coord in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
                         if atom not in constrained_atoms:
                             coordinates[(atom.serial_number-1)*3] = coord[0]
@@ -203,18 +181,29 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             is_already_optimised[optimised_residue_index-1] = True
             is_currently_optimised_or_queued[optimised_residue_index-1] = False
 
+            added = False
+            for res in nearest_residues:
+                res_i = res.id[1] - 1
+                if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
+                    continue
+                if all(is_already_optimised[less_flexible_residue_index] for less_flexible_residue_index in PRO.less_flexible_residues[res_i]):
+                    with lock:
+                        if is_currently_optimised_or_queued[res_i] == False:
+                            is_currently_optimised_or_queued[res_i] = True
+                            queue.put(res)
+                            added = True
 
-
-
-
-
-
-
-
-
-
-
-
+            if added is False and queue.empty():
+                for res in PRO.residues:
+                    res_i = res.id[1] - 1
+                    if is_already_optimised[res_i] or is_currently_optimised_or_queued[res_i]:
+                        continue
+                    if all(is_already_optimised[less_flexible_residue_index] for less_flexible_residue_index in
+                           PRO.less_flexible_residues[res_i]):
+                        with lock:
+                            if is_currently_optimised_or_queued[res_i] == False:
+                                is_currently_optimised_or_queued[res_i] = True
+                                queue.put(res)
 
 
 
@@ -230,22 +219,17 @@ class PRO:
         self.delete_auxiliary_files = delete_auxiliary_files
 
     def optimise(self):
+        print(f"Loading of structure from {self.PDB_file}... ", end="")
         self._load_molecule()
+        print("ok")
+
         print("Optimisation... ", end="")
-
         queue = Queue()
-
-
-
         coordinates = Array("d", [coord for atom in self.structure.get_atoms() for coord in atom.coord], lock=False)
-
-
         is_already_optimised = Array("d", [0 for _ in self.residues], lock=False)
         is_currently_optimised_or_queued = Array("d", [0 for _ in self.residues], lock=False)
-
         lock = Lock()
-
-        for seed in self.sorted_residues[0]:
+        for seed in self.seeds:
             queue.put(seed)
             is_currently_optimised_or_queued[seed.id[1]-1] = True
         processes = []
@@ -255,9 +239,6 @@ class PRO:
             processes.append(p)
         for p in processes:
             p.join()
-
-        # for c, a in zip(coordinates, self.structure.get_atoms()):
-        #     a.coord = c
         for a in self.structure.get_atoms():
             a.coord = np.array(coordinates[(a.serial_number-1)*3:(a.serial_number-1)*3+3])
         print("ok")
@@ -265,12 +246,12 @@ class PRO:
         print("Storage of the optimised structure... ", end="")
         logs = sorted([json.loads(open(f).read()) for f in glob(f"{self.data_dir}/sub_*/residue.log")],
                       key=lambda x: x['residue index'])
-        atoms_counter = 0
+        atom_counter = 0
         for optimised_residue, log in zip(self.residues, logs):
             d = 0
             for optimised_atom in optimised_residue.get_atoms():
-                d += dist(optimised_atom.coord, self.original_atoms_positions[atoms_counter])**2
-                atoms_counter += 1
+                d += dist(optimised_atom.coord, self.original_atoms_positions[atom_counter])**2
+                atom_counter += 1
             residual_rmsd = (d / len(list(optimised_residue.get_atoms())))**(1/2)
             log["residual_rmsd"] = residual_rmsd
             if residual_rmsd > 1:
@@ -283,7 +264,6 @@ class PRO:
         print("ok\n\n")
 
     def _load_molecule(self):
-        print(f"Loading of structure from {self.PDB_file}... ", end="")
         system(f"mkdir {self.data_dir};"
                f"mkdir {self.data_dir}/inputed_PDB;"
                f"mkdir {self.data_dir}/optimised_PDB;"
@@ -299,8 +279,6 @@ class PRO:
             exit()
         self.residues = list(self.structure.get_residues())
         self.original_atoms_positions = [atom.coord for atom in self.structure.get_atoms()]
-        kdtree = NeighborSearch(list(self.structure.get_atoms()))
-
         amk_radius = {'ALA': 2.4801,
                       'ARG': 4.8618,
                       'ASN': 3.2237,
@@ -321,53 +299,41 @@ class PRO:
                       'TRP': 4.6836,
                       'TYR': 4.5148,
                       'VAL': 2.9515}
-
+        kdtree = NeighborSearch(list(self.structure.get_atoms()))
         self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
                                  for residue in self.residues]
-
-
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
-            volume_c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) +3) ** 3)
-            num_of_atoms_c = len(set(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) +2, level="A")))
+            volume_c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 2.5) ** 3)
+            num_of_atoms_c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 2.5, level="A"))
             density_c = num_of_atoms_c/volume_c
-            volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) +10) ** 3)
-            num_of_atoms_2c = len(set(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) +5, level="A")))
+
+            volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 5) ** 3)
+            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 5, level="A"))
             density_2c = num_of_atoms_2c/volume_2c
-            volume_3c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) +15) ** 3)
-            num_of_atoms_3c = len(set(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) +10, level="A")))
+
+            volume_3c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
+            num_of_atoms_3c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 10, level="A"))
             density_3c = num_of_atoms_3c/volume_3c
-            self.density_of_atoms_around_residues.append(density_c + density_2c/10 + density_3c/20)
 
+            volume_4c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 20) ** 3)
+            num_of_atoms_4c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 20, level="A"))
+            density_4c = num_of_atoms_4c/volume_4c
+            self.density_of_atoms_around_residues.append(density_c + density_2c/5 + density_3c/10 + density_4c/20)
 
-        self.nnearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
-                                  for residue in self.residues]
-
-        unsorted_residues = [res for res in self.residues]
-        sorted_residues = []
-        already_sorted = [False for _ in range(len(self.residues))]
-        while len(unsorted_residues):
-            round_residues = []
-            for res in unsorted_residues:
-                for near_residue in self.nnearest_residues[res.id[1]-1]:
-                    if res == near_residue:
-                        continue
-                    if already_sorted[near_residue.id[1]-1]:
-                        continue
-                    if self.density_of_atoms_around_residues[near_residue.id[1]-1] > self.density_of_atoms_around_residues[res.id[1]-1]:
-                        break
-                else:
-                    round_residues.append(res)
-            for res in round_residues:
-                unsorted_residues.remove(res)
-                already_sorted[res.id[1]-1] = True
-            sorted_residues.append(round_residues)
-        self.sorted_residues = sorted_residues
-        print("ok")
-        # from pprint import pprint
-        # pprint(self.sorted_residues)
-        # exit()
-
+        self.less_flexible_residues = []
+        for res in self.residues:
+            less_flexible_residues_than_res = []
+            for near_residue in self.nearest_residues[res.id[1] - 1]:
+                if res == near_residue:
+                    continue
+                if self.density_of_atoms_around_residues[near_residue.id[1]-1] > self.density_of_atoms_around_residues[res.id[1]-1]:
+                    less_flexible_residues_than_res.append(near_residue.id[1]-1)
+            self.less_flexible_residues.append(less_flexible_residues_than_res)
+        self.seeds = []
+        for res, less_flexible_residues in zip(self.residues, self.less_flexible_residues):
+            if not less_flexible_residues:
+                self.seeds.append(res)
 
 
 
