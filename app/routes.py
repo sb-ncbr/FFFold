@@ -61,7 +61,7 @@ def optimise_structures():
         pdb_file_with_hydrogens = f'{data_dir}/{code}_added_H.pdb'
 
         # protonate structure
-        os.system(f'/opt/venv/bin/pdb2pqr30 --noopt --titration-state-method propka '
+        os.system(f'/opt/venv/bin/pdb2pqr30 --titration-state-method propka '
                   f'--with-ph {ph} --pdb-output {pdb_file_with_hydrogens} {pdb_file} '
                   f'{data_dir}/{code}.pqr > {data_dir}/propka.log 2>&1 ')
 
