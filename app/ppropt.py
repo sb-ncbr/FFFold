@@ -65,7 +65,6 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
     while not all(is_already_optimised):
         try:
             optimised_residue = queue.get(block=False)
-            print(optimised_residue)
         except QueueEmpty:
             sleep(0.001)
         else:
@@ -81,8 +80,8 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             for residue in nearest_residues:  # select substructure residues
                 for atom in residue.get_atoms():
                     atom.coord = np.array(coordinates[(atom.serial_number-1)*3:(atom.serial_number-1)*3+3])
-                minimum_distances, absolute_min_distance = get_distances([atom.coord for atom in optimised_residue.get_atoms()],
-                                                                         [atom.coord for atom in residue.get_atoms()])
+                minimum_distances, absolute_min_distance = get_distances(np.array([atom.coord for atom in optimised_residue.get_atoms()]),
+                                                                         np.array([atom.coord for atom in residue.get_atoms()]))
                 if absolute_min_distance < 6:
                     constrained_atoms = []
                     for atom_distance, atom in zip(minimum_distances, residue.get_atoms()):
@@ -162,7 +161,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 sup.set_atoms(or_constrained_atoms, op_constrained_atoms)
                 sup.apply(optimised_substructure.get_atoms())
                 for op_res, or_res in zip(optimised_substructure_residues, substructure_residues):
-                    for atom,coord in zip(PRO.residues[or_res.index-1].get_atoms(),[a.coord for a in op_res.get_atoms()]):
+                    for atom, coord in zip(PRO.residues[or_res.index-1].get_atoms(), [a.coord for a in op_res.get_atoms()]):
                         if atom not in constrained_atoms:
                             coordinates[(atom.serial_number-1)*3] = coord[0]
                             coordinates[(atom.serial_number-1)*3+1] = coord[1]
@@ -188,7 +187,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                     continue
                 if all(is_already_optimised[less_flexible_residue_index] for less_flexible_residue_index in PRO.less_flexible_residues[res_i]):
                     with lock:
-                        if is_currently_optimised_or_queued[res_i] == False:
+                        if is_currently_optimised_or_queued[res_i] == False:  # == is right because multiprocessing
                             is_currently_optimised_or_queued[res_i] = True
                             queue.put(res)
                             added = True
@@ -201,10 +200,9 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                     if all(is_already_optimised[less_flexible_residue_index] for less_flexible_residue_index in
                            PRO.less_flexible_residues[res_i]):
                         with lock:
-                            if is_currently_optimised_or_queued[res_i] == False:
+                            if is_currently_optimised_or_queued[res_i] == False:  # == is right because multiprocessing
                                 is_currently_optimised_or_queued[res_i] = True
                                 queue.put(res)
-
 
 
 class PRO:
@@ -334,7 +332,6 @@ class PRO:
         for res, less_flexible_residues in zip(self.residues, self.less_flexible_residues):
             if not less_flexible_residues:
                 self.seeds.append(res)
-
 
 
 if __name__ == '__main__':
