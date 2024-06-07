@@ -64,15 +64,15 @@ def get_distances(optimised_residue, residue):
 def optimise_substructure(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, PRO):
     while not all(is_already_optimised):
         try:
-            optimised_residue = queue.get(block=False)
+            optimised_residue_index = queue.get(block=False)
         except QueueEmpty:
             sleep(0.001)
         else:
+            optimised_residue = PRO.residues[optimised_residue_index]
             substructure_residues = []  # all residues in substructure
-            optimised_residue_index = optimised_residue.id[1]
             constrained_atom_indices = []  # indices of substructure atoms, which should be constrained during optimisation
             counter_atoms = 1  # start from 1 because of xtb countering
-            nearest_residues = sorted(PRO.nearest_residues[optimised_residue_index-1])
+            nearest_residues = sorted(PRO.nearest_residues[optimised_residue_index])
 
             for atom in optimised_residue:
                 atom.coord = np.array(coordinates[(atom.serial_number - 1) * 3:(atom.serial_number - 1) * 3 + 3])
@@ -91,7 +91,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                         counter_atoms += 1
                     substructure_residues.append(Residue(index=residue.id[1],
                                                          constrained_atoms=constrained_atoms))
-            substructure_data_dir = f"{PRO.data_dir}/sub_{optimised_residue_index}"
+            substructure_data_dir = f"{PRO.data_dir}/sub_{optimised_residue_index+1}"
             system(f"mkdir {substructure_data_dir}")
             selector = SelectIndexedResidues()
             selector.indices = set([residue.index for residue in substructure_residues])
@@ -135,6 +135,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 xtb_settings_file.write(substructure_settings)
             run_xtb = (f"cd {substructure_data_dir} ;"
                        f"ulimit -s unlimited ;"
+                       f"export OMP_STACKSIZE=5G ; "
                        f"export OMP_NUM_THREADS=1,1 ;"
                        f"export OMP_MAX_ACTIVE_LEVELS=1 ;"
                        f"export MKL_NUM_THREADS=1 ;"
@@ -170,15 +171,15 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
             else:
                 category = "Not optimised residue"
                 engine = "none"
-            log = {"residue index": optimised_residue_index,
+            log = {"residue index": optimised_residue_index + 1,
                    "residue name": SeqUtils.IUPACData.protein_letters_3to1[optimised_residue.resname.capitalize()],
                    "category": category,
                    "optimisation engine": engine}
             with open(f"{substructure_data_dir}/residue.log", "w") as residue_log:
                 residue_log.write(json.dumps(log, indent=2))
 
-            is_already_optimised[optimised_residue_index-1] = True
-            is_currently_optimised_or_queued[optimised_residue_index-1] = False
+            is_already_optimised[optimised_residue_index] = True
+            is_currently_optimised_or_queued[optimised_residue_index] = False
 
             added = False
             for res in nearest_residues:
@@ -189,7 +190,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                     with lock:
                         if is_currently_optimised_or_queued[res_i] == False:  # == is right because multiprocessing
                             is_currently_optimised_or_queued[res_i] = True
-                            queue.put(res)
+                            queue.put(res.id[1]-1)
                             added = True
 
             if added is False and queue.empty():
@@ -202,7 +203,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                         with lock:
                             if is_currently_optimised_or_queued[res_i] == False:  # == is right because multiprocessing
                                 is_currently_optimised_or_queued[res_i] = True
-                                queue.put(res)
+                                queue.put(res.id[1]-1)
 
 
 class PRO:
@@ -229,7 +230,8 @@ class PRO:
         lock = Lock()
         for seed in self.seeds:
             queue.put(seed)
-            is_currently_optimised_or_queued[seed.id[1]-1] = True
+            # is_currently_optimised_or_queued[seed.id[1]-1] = True
+            is_currently_optimised_or_queued[seed] = True
         processes = []
         for _ in range(self.cpu):
             p = Process(target=optimise_substructure, args=(coordinates, is_already_optimised, is_currently_optimised_or_queued, queue, lock, self))
@@ -324,7 +326,7 @@ class PRO:
         self.seeds = []
         for res, less_flexible_residues in zip(self.residues, self.less_flexible_residues):
             if not less_flexible_residues:
-                self.seeds.append(res)
+                self.seeds.append(res.id[1]-1)
 
 
 if __name__ == '__main__':
