@@ -298,26 +298,19 @@ class PRO:
                       'TYR': 4.5148,
                       'VAL': 2.9515}
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+6, level="R"))
                                  for residue in self.residues]
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
-            volume_c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 2.5) ** 3)
-            num_of_atoms_c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 2.5, level="A"))
+            volume_c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 2) ** 3)
+            num_of_atoms_c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 2, level="A"))
             density_c = num_of_atoms_c/volume_c
 
-            volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 5) ** 3)
-            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 5, level="A"))
+            volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
+            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 8, level="A"))
             density_2c = num_of_atoms_2c/volume_2c
 
-            volume_3c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
-            num_of_atoms_3c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 10, level="A"))
-            density_3c = num_of_atoms_3c/volume_3c
-
-            volume_4c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 20) ** 3)
-            num_of_atoms_4c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 20, level="A"))
-            density_4c = num_of_atoms_4c/volume_4c
-            self.density_of_atoms_around_residues.append(density_c + density_2c/5 + density_3c/10 + density_4c/20)
+            self.density_of_atoms_around_residues.append(density_c + density_2c/10)
 
         self.less_flexible_residues = []
         for res in self.residues:
