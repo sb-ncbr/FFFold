@@ -230,7 +230,6 @@ class PRO:
         lock = Lock()
         for seed in self.seeds:
             queue.put(seed)
-            # is_currently_optimised_or_queued[seed.id[1]-1] = True
             is_currently_optimised_or_queued[seed] = True
         processes = []
         for _ in range(self.cpu):
@@ -300,7 +299,7 @@ class PRO:
                       'TYR': 4.5148,
                       'VAL': 2.9515}
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+10, level="R"))
                                  for residue in self.residues]
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
@@ -311,7 +310,6 @@ class PRO:
             volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
             num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 10, level="A"))
             density_2c = num_of_atoms_2c/volume_2c
-
             self.density_of_atoms_around_residues.append(density_c + density_2c/10)
 
         self.less_flexible_residues = []
@@ -327,7 +325,6 @@ class PRO:
         for res, less_flexible_residues in zip(self.residues, self.less_flexible_residues):
             if not less_flexible_residues:
                 self.seeds.append(res.id[1]-1)
-
 
 if __name__ == '__main__':
     args = load_arguments()
