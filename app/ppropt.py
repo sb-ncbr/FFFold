@@ -298,7 +298,7 @@ class PRO:
                       'TYR': 4.5148,
                       'VAL': 2.9515}
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+6, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+8, level="R"))
                                  for residue in self.residues]
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
@@ -307,7 +307,7 @@ class PRO:
             density_c = num_of_atoms_c/volume_c
 
             volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
-            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 8, level="A"))
+            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 10, level="A"))
             density_2c = num_of_atoms_2c/volume_2c
 
             self.density_of_atoms_around_residues.append(density_c + density_2c/10)
