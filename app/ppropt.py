@@ -299,7 +299,7 @@ class PRO:
                       'TYR': 4.5148,
                       'VAL': 2.9515}
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+10, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+6, level="R"))
                                  for residue in self.residues]
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
@@ -325,6 +325,7 @@ class PRO:
         for res, less_flexible_residues in zip(self.residues, self.less_flexible_residues):
             if not less_flexible_residues:
                 self.seeds.append(res.id[1]-1)
+
 
 if __name__ == '__main__':
     args = load_arguments()
