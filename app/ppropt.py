@@ -241,7 +241,7 @@ class PRO:
         for a in self.structure.get_atoms():
             a.coord = np.array(coordinates[(a.serial_number-1)*3:(a.serial_number-1)*3+3])
         print("ok")
-
+        
         print("Storage of the optimised structure... ", end="")
         logs = sorted([json.loads(open(f).read()) for f in glob(f"{self.data_dir}/sub_*/residue.log")],
                       key=lambda x: x['residue index'])
@@ -278,40 +278,38 @@ class PRO:
             exit()
         self.residues = list(self.structure.get_residues())
         self.original_atoms_positions = [atom.coord for atom in self.structure.get_atoms()]
-        amk_radius = {'ALA': 2.4801,
-                      'ARG': 4.8618,
-                      'ASN': 3.2237,
-                      'ASP': 2.8036,
-                      'CYS': 2.5439,
-                      'GLN': 3.8456,
-                      'GLU': 3.3963,
-                      'GLY': 2.1455,
-                      'HIS': 3.8376,
-                      'ILE': 3.4050,
-                      'LEU': 3.5357,
-                      'LYS': 4.4521,
-                      'MET': 4.1821,
-                      'PHE': 4.1170,
-                      'PRO': 2.8418,
-                      'SER': 2.4997,
-                      'THR': 2.7487,
-                      'TRP': 4.6836,
-                      'TYR': 4.5148,
-                      'VAL': 2.9515}
+        amk_max_radius = {'MET': 4.582198220688083,
+                          'VAL': 3.441906011526445,
+                          'ASP': 3.5807236327594176,
+                          'LYS': 5.142450211142281,
+                          'LEU': 4.174556929072557,
+                          'ILE': 3.776764078186954,
+                          'HIS': 4.3249529464818215,
+                          'PRO': 3.440157836371418,
+                          'TRP': 5.299980225372395,
+                          'SER': 2.859502908272858,
+                          'GLY': 2.377182182239665,
+                          'ARG': 5.645318573062258,
+                          'GLN': 4.263049856809807,
+                          'ALA': 2.695115955275209,
+                          'GLU': 4.007705840682104,
+                          'PHE': 4.670650293844719,
+                          'THR': 3.264775624992186,
+                          'TYR': 4.8926122882543535,
+                          'ASN': 3.6699696442588423,
+                          'CYS': 2.941139934314898}
         kdtree = NeighborSearch(list(self.structure.get_atoms()))
-        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_radius[residue.resname]+6, level="R"))
+        self.nearest_residues = [set(kdtree.search(residue.center_of_mass(geometric=True), amk_max_radius[residue.resname]+6, level="R"))
                                  for residue in self.residues]
         self.density_of_atoms_around_residues = []
         for residue in self.residues:
-            volume_c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 2) ** 3)
-            num_of_atoms_c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 2, level="A"))
+            volume_c = ((4 / 3) * 3.14 * ((amk_max_radius[residue.resname]) + 2) ** 3)
+            num_of_atoms_c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_max_radius[residue.resname]) + 2, level="A"))
             density_c = num_of_atoms_c/volume_c
-
-            volume_2c = ((4 / 3) * 3.14 * ((amk_radius[residue.resname]) + 10) ** 3)
-            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_radius[residue.resname]) + 10, level="A"))
+            volume_2c = ((4 / 3) * 3.14 * ((amk_max_radius[residue.resname]) + 15) ** 3)
+            num_of_atoms_2c = len(kdtree.search(residue.center_of_mass(geometric=True), (amk_max_radius[residue.resname]) + 15, level="A"))
             density_2c = num_of_atoms_2c/volume_2c
-            self.density_of_atoms_around_residues.append(density_c + density_2c/10)
-
+            self.density_of_atoms_around_residues.append(density_c + density_2c/100)
         self.less_flexible_residues = []
         for res in self.residues:
             less_flexible_residues_than_res = []
