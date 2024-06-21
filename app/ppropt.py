@@ -86,7 +86,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 if absolute_min_distance < 6:
                     constrained_atoms = []
                     for atom_distance, atom in zip(minimum_distances, residue.get_atoms()):
-                        if atom.name == "CA" or atom_distance > 4 or (confidency > 90 and atom.name != "H"):
+                        if atom.name == "CA" or atom_distance > 4 or (confidency > 90 and atom.name[0] != "H"):
                             constrained_atoms.append(atom)
                             constrained_atom_indices.append(str(counter_atoms))
                         counter_atoms += 1
