@@ -78,6 +78,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 atom.coord = np.array(coordinates[(atom.serial_number - 1) * 3:(atom.serial_number - 1) * 3 + 3])
 
             for residue in nearest_residues:  # select substructure residues
+                confidency = PRO.confidencies[residue.id[1]-1]
                 for atom in residue.get_atoms():
                     atom.coord = np.array(coordinates[(atom.serial_number-1)*3:(atom.serial_number-1)*3+3])
                 minimum_distances, absolute_min_distance = get_distances(np.array([atom.coord for atom in optimised_residue.get_atoms()]),
@@ -85,7 +86,7 @@ def optimise_substructure(coordinates, is_already_optimised, is_currently_optimi
                 if absolute_min_distance < 6:
                     constrained_atoms = []
                     for atom_distance, atom in zip(minimum_distances, residue.get_atoms()):
-                        if atom.name == "CA" or atom_distance > 4:
+                        if atom.name == "CA" or atom_distance > 4 or (confidency > 90 and atom.name != "H"):
                             constrained_atoms.append(atom)
                             constrained_atom_indices.append(str(counter_atoms))
                         counter_atoms += 1
@@ -241,7 +242,7 @@ class PRO:
         for a in self.structure.get_atoms():
             a.coord = np.array(coordinates[(a.serial_number-1)*3:(a.serial_number-1)*3+3])
         print("ok")
-        
+
         print("Storage of the optimised structure... ", end="")
         logs = sorted([json.loads(open(f).read()) for f in glob(f"{self.data_dir}/sub_*/residue.log")],
                       key=lambda x: x['residue index'])
@@ -277,6 +278,7 @@ class PRO:
             print(f"\nERROR! PDB file {self.PDB_file} does not contain any structure.\n")
             exit()
         self.residues = list(self.structure.get_residues())
+        self.confidencies = [residue["CA"].bfactor for residue in self.residues]
         self.original_atoms_positions = [atom.coord for atom in self.structure.get_atoms()]
         amk_max_radius = {'MET': 4.582198220688083,
                           'VAL': 3.441906011526445,
