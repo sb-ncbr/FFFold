@@ -13,7 +13,7 @@ joblib==1.2.0
 llvmlite==0.41.1
 MarkupSafe==2.1.2
 mmcif-pdbx==2.0.1
-numba==0.58.1
+numba==0.61.0
 numpy==1.23.5
 pdb2pqr==3.6.1
 Pillow==10.1.0
