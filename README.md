@@ -9,7 +9,7 @@ Then, clone the project and install the project dependencies by running:
 ```bash
 $ cd /opt
 $ git clone --recurse-submodules --depth 1 https://github.com/sb-ncbr/FFFold
-$ sudo python3.9 -m venv venv
+$ sudo python3.11 -m venv venv
 $ . venv/bin/activate
 $ pip install -r FFFold/requirements.txt
 ```
