@@ -11,7 +11,7 @@ $ cd /opt
 $ git clone --recurse-submodules --depth 1 https://github.com/sb-ncbr/FFFold
 $ sudo python3.9 -m venv venv
 $ . venv/bin/activate
-$ pip install -r requirements.txt
+$ pip install -r FFFold/requirements.txt
 ```
 Run the project by running the following command inside the virtual environment:
 
