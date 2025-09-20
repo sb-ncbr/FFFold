@@ -111,7 +111,10 @@ def main_site():
             flash(Markup(f'Optimisation of structure <strong>{code}</strong> with pH <strong>{ph}</strong> is already submitted. '
                          f'For job status visit <a href="https://fffold.biodata.ceitec.cz/results?ID={ID}" class="alert-link"'
                          f'target="_blank" rel="noreferrer">https://fffold.biodata.ceitec.cz/results?ID={ID}</a>.'), 'info')
-            return render_template('index.html', running=len(running), queued=len(queue))
+            # return render_template('index.html', running=len(running), queued=len(queue))
+            return jsonify({"running": len(running),
+                            "queued": len(queue),
+                            "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
 
         elif status == "unsubmitted":
 
@@ -123,7 +126,10 @@ def main_site():
                              f'UniProt code is allowed only in its short form (e.g. A0A1P8BEE7, B7ZW16). '
                              f'Other notations (e.g. A0A159JYF7_9DIPT, Q8WZ42-F2) are not supported. '
                              f'An alternative option is AlpfaFold DB Identifier (e.g. AF-L8BU87-F1).'), 'warning')
-                return render_template('index.html', running=len(running), queued=len(queue))
+                # return render_template('index.html', running=len(running), queued=len(queue))
+                return jsonify({"running": len(running),
+                                "queued": len(queue),
+                                "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
             data_dir = f'{root_dir}/calculated_structures/{ID}'
             os.mkdir(data_dir)
             with open(f'{data_dir}/{code}.pdb', 'w') as pdb:
@@ -139,7 +145,10 @@ def main_site():
                 optimisers.append(optimiser)
             return redirect(url_for('results', ID=ID))
 
-    return render_template('index.html', running=len(running), queued=len(queue))
+    # return render_template('index.html', running=len(running), queued=len(queue))
+    return jsonify({"running": len(running),
+                    "queued": len(queue),
+                    "calculated": len(glob(f'{root_dir}/calculated_structures/*'))})
 
 
 
@@ -161,20 +170,28 @@ def results():
         return redirect(url_for('main_site'))
 
     if status == "queued":
-        return render_template('queued.html',
-                               code=code,
-                               ph=ph)
+        # return render_template('queued.html',
+        #                        code=code,
+        #                        ph=ph)
+        return jsonify({"code": code,
+                        "ph": ph})
 
     elif status == "running":
-        return render_template('running.html',
-                               ID=ID,
-                               code=code,
-                               ph=ph)
+        # return render_template('running.html',
+        #                        ID=ID,
+        #                        code=code,
+        #                        ph=ph)
+        return jsonify({"ID": ID,
+                        "code": code,
+                        "ph": ph})
 
-    return render_template('results.html',
-                           ID=ID,
-                           code=code,
-                           ph=ph)
+    # return render_template('results.html',
+    #                        ID=ID,
+    #                        code=code,
+    #                        ph=ph)
+    return jsonify({"ID": ID,
+                    "code": code,
+                    "ph": ph})
 
 
 @application.route('/api/running_progress', methods=['GET'])
@@ -206,10 +223,11 @@ def running_progress():
     iterations = len(glob(f'{root_dir}/calculated_structures/{ID}/optimised_PDB/*.pdb'))
     percent_value = round(iterations / 50)
     percent_text = f"{iterations}/50"
-        
+
     response.update({
         'percent_value': percent_value,
-        'percent_text': percent_text
+        'percent_text': percent_text,
+        'remaining_time': 100
     })
     
     return jsonify(response)
@@ -248,4 +266,5 @@ def get_residues_logs(ID: str):
 
 @application.errorhandler(404)
 def page_not_found(error):
-    return render_template('404.html'), 404
+    # return render_template('404.html'), 404
+    return jsonify({})
