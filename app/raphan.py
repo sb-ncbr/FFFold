@@ -304,13 +304,14 @@ class Raphan:
                     bar.refresh()
                     break
             bar.close()
+            self.iterations = iteration
 
             # control of unconverged residues
             unconverged_substructures = [str(substructure_data.optimised_residue_index) for substructure_data in self.substructures_data if not substructure_data.converged]
             if unconverged_substructures:
                 print(f"Warning! Optimisation for residues with indices {', '.join(unconverged_substructures)} did not converge!")
 
-        print(f"Saving optimised structure to {f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb"}... ", end="")
+        print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb... ", end="")
         self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb")
         with open(f"{self.data_dir}/residues.logs", "w") as residues_logs:
             logs = []
@@ -383,7 +384,7 @@ def run_full_xtb_optimisation(raphan):
     system(f"mkdir {raphan.data_dir}/full_xtb_optimisation ")
     system(f"mkdir {raphan.data_dir}/full_xtb_optimisation/original ")
     with open(f"{raphan.data_dir}/full_xtb_optimisation/original/xtb_settings.inp", "w") as xtb_settings_file:
-        xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {",".join(alpha_carbons_indices)}\n$end""")
+        xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {','.join(alpha_carbons_indices)}\n$end")
     t = time()
     system(f"""cd {raphan.data_dir}/full_xtb_optimisation/original;
                export OMP_NUM_THREADS=1,1 ;
@@ -397,7 +398,7 @@ def run_full_xtb_optimisation(raphan):
     # optimise structure optimised with raphan
     system(f"mkdir {raphan.data_dir}/full_xtb_optimisation/raphan ")
     with open(f"{raphan.data_dir}/full_xtb_optimisation/raphan/xtb_settings.inp", "w") as xtb_settings_file:
-        xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {",".join(alpha_carbons_indices)}\n$end""")
+        xtb_settings_file.write(f"$constrain\n    force constant=10.0\n    atoms: {','.join(alpha_carbons_indices)}\n$end")
     t = time()
     system(f"""cd {raphan.data_dir}/full_xtb_optimisation/raphan ;
                export OMP_NUM_THREADS=1,1 ;
@@ -443,6 +444,7 @@ def run_full_xtb_optimisation(raphan):
 
     # write results
     results = {"raphan time": raphan.calculation_time,
+               "raphan iterations": raphan.iterations,
                "xtb(original) time": xtb_original_time,
                "xtb(raphan) time": xtb_raphan_time,
                "original/xtb(original) MAD": float(original_xtb_original_difference),
