@@ -72,6 +72,7 @@ class Substructure_data:
         self.atoms_30A = atoms_30A
         self.data_dir = data_dir
         self.optimised_residue_index = optimised_residue_index
+        self.optimised_residue = optimised_residue
         self.archive = []
         self.converged = False
         self.io = io
@@ -291,11 +292,11 @@ class Raphan:
             for iteration in range(1, max_iterations+1):
                 bar.update(1)
                 iteration_results = pool.starmap(optimise_substructure, [(substructure, iteration) for substructure in self.substructures_data if not substructure.converged])
-                for optimised_coordinates, sc, substructure_data in iteration_results:
+                for optimised_coordinates, convergence, substructure_data in iteration_results:
                     for optimised_atom_index, optimised_atom_coordinates in optimised_coordinates:
                         self.optimised_coordinates[optimised_atom_index] = optimised_atom_coordinates
                     self.substructures_data[substructure_data.optimised_residue_index-1].archive.append([x[1] for x in optimised_coordinates])
-                    self.substructures_data[substructure_data.optimised_residue_index-1].converged = sc
+                    self.substructures_data[substructure_data.optimised_residue_index-1].converged = convergence
                 for atom, coord in zip(self.structure.get_atoms(), self.optimised_coordinates):
                     atom.coord = coord
                 self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised_{iteration}.pdb")
@@ -313,15 +314,6 @@ class Raphan:
 
         print(f"Saving optimised structure to {self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb... ", end="")
         self.io.save(f"{self.data_dir}/optimised_PDB/{path.basename(self.PDB_file[:-4])}_optimised.pdb")
-        with open(f"{self.data_dir}/residues.logs", "w") as residues_logs:
-            logs = []
-            for i, residue in enumerate(self.structure.get_residues(), start=1):
-                logs.append({"residue index": i,
-                             "residue name": SeqUtils.IUPACData.protein_letters_3to1[residue.resname.capitalize()],
-                             "category": "Optimised residue"})
-
-
-            residues_logs.write(json.dumps(logs, indent=2))
         print("ok")
 
         if self.delete_auxiliary_files:

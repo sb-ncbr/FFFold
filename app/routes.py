@@ -258,6 +258,7 @@ def get_original_structure(ID: str):
     return Response(open(filepath, 'r').read(), mimetype='text/plain')
 
 
+# asi smazat
 @application.route('/residues_logs/<ID>')
 def get_residues_logs(ID: str):
     filepath = f'{root_dir}/calculated_structures/{ID}/residues.logs'
